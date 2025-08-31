@@ -77,10 +77,7 @@ export default function Home() {
               </h1>
             </div>
 
-            {/* 검색바 */}
-            <div className="flex-1 max-w-2xl mx-8">
-              <SearchBar onSearch={handleSearch} />
-            </div>
+
 
             {/* 액션 버튼들 */}
             <div className="flex items-center space-x-3">
@@ -117,6 +114,13 @@ export default function Home() {
 
       {/* 메인 콘텐츠 */}
       <main id="gallery-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 검색바 */}
+        <div className="mb-8">
+          <div className="max-w-2xl mx-auto">
+            <SearchBar onSearch={handleSearch} />
+          </div>
+        </div>
+
         {/* 필터 섹션 */}
         <div className="mb-8">
           <CategoryFilter
