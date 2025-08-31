@@ -33,7 +33,7 @@ export default function MasonryGallery({
   onLikeToggle
 }: MasonryGalleryProps) {
   const [imageLoadStates, setImageLoadStates] = useState<Record<string, boolean>>({});
-  const { setMultipleImageLikeCounts } = useLikes();
+  const { setMultipleImageLikeCounts, isLiked } = useLikes();
 
   const handleImageLoad = (imageId: string) => {
     setImageLoadStates(prev => ({ ...prev, [imageId]: true }));
