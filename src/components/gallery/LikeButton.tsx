@@ -50,7 +50,7 @@ export default function LikeButton({
     
     try {
       await onToggle?.(imageId, newCount, newIsLiked);
-    } catch (error) {
+    } catch {
       // 에러 발생시 롤백
       setIsLiked(isLiked);
       setCount(count);

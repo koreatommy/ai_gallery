@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { imageService } from '@/lib/database';
 import type { Image } from '@/types';
@@ -51,7 +51,7 @@ export function useInfiniteScroll({
   }, [searchQuery, categoryId, filtersChanged, queryClient]);
 
   // 고유한 쿼리 키 생성 (offset 제외)
-  const baseQueryKey = ['images', searchQuery, categoryId];
+  const baseQueryKey = useMemo(() => ['images', searchQuery, categoryId], [searchQuery, categoryId]);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: [...baseQueryKey, offset],

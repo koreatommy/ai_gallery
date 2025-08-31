@@ -163,7 +163,7 @@ export class PerformanceService {
   // 메모리 사용량 모니터링
   static getMemoryUsage(): MemoryInfo | null {
     if ('memory' in performance) {
-      return (performance as any).memory;
+      return (performance as unknown as { memory: MemoryInfo }).memory;
     }
     return null;
   }
@@ -192,7 +192,7 @@ export class PerformanceService {
   }
 
   // 디바운스 유틸리티
-  static debounce<T extends (...args: any[]) => void>(
+  static debounce<T extends (...args: unknown[]) => void>(
     func: T,
     wait: number
   ): (...args: Parameters<T>) => void {
@@ -205,7 +205,7 @@ export class PerformanceService {
   }
 
   // 스로틀 유틸리티
-  static throttle<T extends (...args: any[]) => void>(
+  static throttle<T extends (...args: unknown[]) => void>(
     func: T,
     limit: number
   ): (...args: Parameters<T>) => void {
@@ -282,7 +282,7 @@ export class PerformanceService {
   // 이미지 로딩 우선순위 설정
   static setImagePriority(img: HTMLImageElement, priority: 'high' | 'low' | 'auto' = 'auto') {
     if ('fetchPriority' in img) {
-      (img as any).fetchPriority = priority;
+      (img as unknown as { fetchPriority: string }).fetchPriority = priority;
     }
     
     if ('loading' in img) {

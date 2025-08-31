@@ -131,7 +131,7 @@ export default function ImageLightbox({
     }
   };
 
-  const handleLikeToggle = async (imageId: string, newCount: number, isLikedNow: boolean) => {
+  const handleLikeToggle = async (imageId: string) => {
     onLikeToggle?.(imageId);
   };
 

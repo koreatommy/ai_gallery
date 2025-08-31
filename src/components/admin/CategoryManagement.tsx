@@ -330,7 +330,7 @@ export default function CategoryManagement() {
                 return category && category.imageCount > 0 ? (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
                     <p className="text-amber-800 text-sm">
-                      <strong>주의:</strong> 이 카테고리에 속한 {category.imageCount}개의 이미지가 "카테고리 미지정" 상태로 변경됩니다.
+                      <strong>주의:</strong> 이 카테고리에 속한 {category.imageCount}개의 이미지가 &quot;카테고리 미지정&quot; 상태로 변경됩니다.
                     </p>
                   </div>
                 ) : null;

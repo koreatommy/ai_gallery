@@ -3,11 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { Search, Upload, Grid3X3, Heart, MessageCircle, Eye, Shield } from 'lucide-react';
+import { Search, Upload, Grid3X3, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import InfiniteScrollGallery from '@/components/gallery/InfiniteScrollGallery';
 import ImageUploader from '@/components/gallery/ImageUploader';
 import CategoryFilter from '@/components/gallery/CategoryFilter';

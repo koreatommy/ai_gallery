@@ -37,7 +37,6 @@ export function useLikes({ userId = '00000000-0000-0000-0000-000000000000' }: Us
   // 좋아요 토글
   const toggleLike = async (imageId: string): Promise<{ isLiked: boolean; newCount: number }> => {
     try {
-      const isCurrentlyLiked = likedImages.has(imageId);
       const result = await likeService.toggle(imageId, userId);
       
       // 로컬 상태 업데이트

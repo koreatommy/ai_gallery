@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Image, Category, Comment, Like } from '@/types';
+import type { Image, Category, Comment } from '@/types';
 
 // 카테고리 관련 함수들
 export const categoryService = {
