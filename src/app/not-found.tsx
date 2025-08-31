@@ -1,13 +1,10 @@
+'use client';
+
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Home, Search, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-
-export const metadata: Metadata = {
-  title: '페이지를 찾을 수 없음 - AI Gallery',
-  description: '요청하신 페이지를 찾을 수 없습니다.',
-};
 
 export default function NotFound() {
   return (
