@@ -73,7 +73,7 @@ export default function Home() {
                 <Grid3X3 className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                AI Gallery
+                하남교육재단
               </h1>
             </div>
 
@@ -174,15 +174,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-gray-600">
             <p className="text-sm">
-              © 2025 AI Gallery. 생성형 AI 이미지를 공유하고 발견하세요.
+              © 2025 AI Gallery. 립사이언스 생성형 AI 이미지를 공유하고 발견하세요.
             </p>
-            <div className="flex items-center justify-center space-x-6 mt-4 text-xs text-gray-500">
-              <span>Next.js + Supabase</span>
-              <span>•</span>
-              <span>TypeScript</span>
-              <span>•</span>
-              <span>Tailwind CSS</span>
-            </div>
+
           </div>
         </div>
       </footer>
