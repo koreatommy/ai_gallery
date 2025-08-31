@@ -86,6 +86,22 @@ export default function ImageUploader({ onUploadComplete, maxFiles = 10 }: Image
       return;
     }
 
+    // 필수 필드 검증
+    if (!title.trim()) {
+      toast.error('제목을 입력해주세요.');
+      return;
+    }
+
+    if (!author.trim()) {
+      toast.error('작성자를 입력해주세요.');
+      return;
+    }
+
+    if (!selectedCategory || selectedCategory === 'none') {
+      toast.error('카테고리를 선택해주세요.');
+      return;
+    }
+
     setUploading(true);
     const results: { url: string; thumbnailUrl: string; fileName: string; fileSize: number; width?: number; height?: number }[] = [];
 
@@ -96,8 +112,8 @@ export default function ImageUploader({ onUploadComplete, maxFiles = 10 }: Image
         
         // 2. 데이터베이스에 이미지 메타데이터 저장
         await imageService.create({
-          title: title || fileObj.file.name.replace(/\.[^/.]+$/, ''), // 사용자 입력 제목 또는 파일명(확장자 제거)
-          author: author || undefined,
+          title: title, // 필수 필드이므로 항상 사용자 입력값 사용
+          author: author, // 필수 필드이므로 항상 사용자 입력값 사용
           description: `업로드된 이미지: ${fileObj.file.name}`,
           url: result.url,
           thumbnail_url: result.thumbnailUrl,
@@ -106,7 +122,7 @@ export default function ImageUploader({ onUploadComplete, maxFiles = 10 }: Image
           width: result.width,
           height: result.height,
           tags: [],
-          category_id: selectedCategory && selectedCategory !== 'none' ? selectedCategory : undefined
+          category_id: selectedCategory // 필수 필드이므로 항상 선택된 카테고리 사용
         });
 
         results.push({
@@ -157,29 +173,31 @@ export default function ImageUploader({ onUploadComplete, maxFiles = 10 }: Image
           {/* 제목과 작성자 입력 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="title-input">제목</Label>
+              <Label htmlFor="title-input">제목 <span className="text-red-500">*</span></Label>
               <Input
                 id="title-input"
                 type="text"
-                placeholder="이미지 제목을 입력하세요 (선택사항)"
+                placeholder="이미지 제목을 입력하세요 (필수)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full"
+                required
               />
               <p className="text-xs text-gray-500">
-                입력하지 않으면 파일명이 제목으로 사용됩니다.
+                이미지의 제목을 입력해주세요.
               </p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="author-input">작성자</Label>
+              <Label htmlFor="author-input">작성자 <span className="text-red-500">*</span></Label>
               <Input
                 id="author-input"
                 type="text"
-                placeholder="작성자명을 입력하세요 (선택사항)"
+                placeholder="작성자명을 입력하세요 (필수)"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 className="w-full"
+                required
               />
               <p className="text-xs text-gray-500">
                 사진을 촬영하거나 제작한 사람의 이름입니다.
@@ -189,7 +207,7 @@ export default function ImageUploader({ onUploadComplete, maxFiles = 10 }: Image
 
           {/* 카테고리 선택 */}
           <div className="space-y-2">
-            <Label htmlFor="category-select">카테고리</Label>
+            <Label htmlFor="category-select">카테고리 <span className="text-red-500">*</span></Label>
             <Select 
               value={selectedCategory} 
               onValueChange={setSelectedCategory}
@@ -199,11 +217,10 @@ export default function ImageUploader({ onUploadComplete, maxFiles = 10 }: Image
                 <SelectValue placeholder={
                   loadingCategories 
                     ? "카테고리 로딩 중..." 
-                    : "카테고리를 선택하세요 (선택사항)"
+                    : "카테고리를 선택하세요 (필수)"
                 } />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">카테고리 없음</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
@@ -211,16 +228,11 @@ export default function ImageUploader({ onUploadComplete, maxFiles = 10 }: Image
                 ))}
               </SelectContent>
             </Select>
-            {selectedCategory && selectedCategory !== 'none' && (
+            {selectedCategory && (
               <p className="text-sm text-gray-600">
                 선택된 카테고리: <span className="font-medium text-blue-600">
                   {categories.find(c => c.id === selectedCategory)?.name}
                 </span>
-              </p>
-            )}
-            {selectedCategory === 'none' && (
-              <p className="text-sm text-gray-600">
-                선택된 카테고리: <span className="font-medium text-gray-600">카테고리 없음</span>
               </p>
             )}
           </div>
