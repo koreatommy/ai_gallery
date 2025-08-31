@@ -1,10 +1,19 @@
 import { supabase } from './supabase';
 import type { Image, Category, Comment, Like } from '@/types';
 
+// Supabase 연결 확인 함수
+const checkSupabaseConnection = () => {
+  if (!supabase) {
+    throw new Error('Supabase가 설정되지 않았습니다. 환경 변수를 확인해주세요.');
+  }
+};
+
 // 카테고리 관련 함수들
 export const categoryService = {
   async getAll(): Promise<Category[]> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('categories')
       .select('*')
       .order('name');
@@ -14,7 +23,9 @@ export const categoryService = {
   },
 
   async create(name: string, description?: string): Promise<Category> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('categories')
       .insert({ name, description })
       .select()
@@ -25,7 +36,9 @@ export const categoryService = {
   },
 
   async update(id: string, name: string, description?: string): Promise<Category> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('categories')
       .update({ name, description, updated_at: new Date().toISOString() })
       .eq('id', id)
@@ -37,8 +50,10 @@ export const categoryService = {
   },
 
   async delete(id: string): Promise<void> {
+    checkSupabaseConnection();
+    
     // 해당 카테고리를 사용하는 이미지들을 카테고리 미지정(null)으로 변경
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabase!
       .from('images')
       .update({ category_id: null })
       .eq('category_id', id);
@@ -46,7 +61,7 @@ export const categoryService = {
     if (updateError) throw updateError;
 
     // 카테고리 삭제
-    const { error } = await supabase
+    const { error } = await supabase!
       .from('categories')
       .delete()
       .eq('id', id);
@@ -58,7 +73,9 @@ export const categoryService = {
 // 이미지 관련 함수들
 export const imageService = {
   async getAll(limit = 20, offset = 0): Promise<Image[]> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('image_stats')
       .select('*')
       .order('created_at', { ascending: false })
@@ -69,7 +86,9 @@ export const imageService = {
   },
 
   async getById(id: string): Promise<Image | null> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('image_stats')
       .select('*')
       .eq('id', id)
@@ -80,7 +99,9 @@ export const imageService = {
   },
 
   async getByCategory(categoryId: string, limit = 20, offset = 0): Promise<Image[]> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('image_stats')
       .select('*')
       .eq('category_id', categoryId)
@@ -92,7 +113,9 @@ export const imageService = {
   },
 
   async search(query: string, limit = 20, offset = 0): Promise<Image[]> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('image_stats')
       .select('*')
       .or(`title.ilike.%${query}%,author.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`)
@@ -104,7 +127,9 @@ export const imageService = {
   },
 
   async getTopLiked(limit = 3): Promise<Image[]> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('image_stats')
       .select('*')
       .order('likes_count', { ascending: false })
@@ -128,7 +153,9 @@ export const imageService = {
     category_id?: string;
     tags?: string[];
   }): Promise<Image> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('images')
       .insert(imageData)
       .select()
@@ -139,7 +166,9 @@ export const imageService = {
   },
 
   async update(id: string, updates: Partial<Image>): Promise<Image> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('images')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
@@ -151,7 +180,9 @@ export const imageService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    checkSupabaseConnection();
+    
+    const { error } = await supabase!
       .from('images')
       .delete()
       .eq('id', id);
@@ -163,8 +194,10 @@ export const imageService = {
 // 좋아요 관련 함수들
 export const likeService = {
   async toggle(imageId: string, userId: string = '00000000-0000-0000-0000-000000000000'): Promise<boolean> {
+    checkSupabaseConnection();
+    
     // 기존 좋아요 확인
-    const { data: existing } = await supabase
+    const { data: existing } = await supabase!
       .from('likes')
       .select('id')
       .eq('image_id', imageId)
@@ -173,7 +206,7 @@ export const likeService = {
 
     if (existing) {
       // 좋아요 제거
-      const { error } = await supabase
+      const { error } = await supabase!
         .from('likes')
         .delete()
         .eq('id', existing.id);
@@ -182,7 +215,7 @@ export const likeService = {
       return false;
     } else {
       // 좋아요 추가
-      const { error } = await supabase
+      const { error } = await supabase!
         .from('likes')
         .insert({ image_id: imageId, user_id: userId });
       
@@ -192,7 +225,9 @@ export const likeService = {
   },
 
   async getCount(imageId: string): Promise<number> {
-    const { count, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { count, error } = await supabase!
       .from('likes')
       .select('*', { count: 'exact', head: true })
       .eq('image_id', imageId);
@@ -205,7 +240,9 @@ export const likeService = {
 // 댓글 관련 함수들
 export const commentService = {
   async getByImageId(imageId: string): Promise<Comment[]> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('comments')
       .select('*')
       .eq('image_id', imageId)
@@ -216,7 +253,9 @@ export const commentService = {
   },
 
   async create(imageId: string, content: string, userId: string = '00000000-0000-0000-0000-000000000000'): Promise<Comment> {
-    const { data, error } = await supabase
+    checkSupabaseConnection();
+    
+    const { data, error } = await supabase!
       .from('comments')
       .insert({ image_id: imageId, content, user_id: userId })
       .select()
@@ -227,7 +266,9 @@ export const commentService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    checkSupabaseConnection();
+    
+    const { error } = await supabase!
       .from('comments')
       .delete()
       .eq('id', id);
