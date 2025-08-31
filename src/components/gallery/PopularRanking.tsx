@@ -154,14 +154,19 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
                   <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
                     {image.title}
                   </h3>
-                  {image.author && (
-                    <p className="text-gray-500 text-sm mt-1">
-                      by {image.author}
-                    </p>
-                  )}
+                  <div className="flex items-center space-x-2 mt-1">
+                    {image.author && (
+                      <span className="text-gray-500 text-sm">
+                        by {image.author}
+                      </span>
+                    )}
+                    <span className="text-gray-400 text-sm">
+                      {new Date(image.created_at).toLocaleDateString('ko-KR')}
+                    </span>
+                  </div>
                 </div>
                 
-                {image.description && (
+                {image.description && !image.description.includes('업로드된 이미지:') && (
                   <p className="text-gray-600 text-sm line-clamp-2">
                     {image.description}
                   </p>

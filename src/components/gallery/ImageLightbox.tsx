@@ -341,7 +341,7 @@ export default function ImageLightbox({
           {/* 하단 정보 패널 */}
           <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/50 to-transparent p-4">
             <div className="text-white space-y-2">
-              {image.description && (
+              {image.description && !image.description.includes('업로드된 이미지:') && (
                 <p className="text-sm opacity-90">{image.description}</p>
               )}
               

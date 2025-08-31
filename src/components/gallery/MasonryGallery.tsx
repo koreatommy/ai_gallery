@@ -161,7 +161,7 @@ export default function MasonryGallery({
                   </p>
                 )}
                 
-                {image.description && (
+                {image.description && !image.description.includes('업로드된 이미지:') && (
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                     {image.description}
                   </p>
