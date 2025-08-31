@@ -154,93 +154,101 @@ export default function ImageLightbox({
         >
           {/* 헤더 */}
           <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/50 to-transparent p-4">
-            <div className="flex items-center justify-between text-white">
-              <div className="flex items-center space-x-4">
-                <div className="flex flex-col">
-                  <h2 className="text-xl font-medium">{image.title}</h2>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between text-white space-y-3 md:space-y-0">
+              {/* 제목 및 작성자 정보 */}
+              <div className="flex flex-col space-y-1">
+                <h2 className="text-lg md:text-xl font-medium break-words">{image.title}</h2>
+                <div className="flex items-center space-x-4">
                   {image.author && (
                     <span className="text-sm opacity-75">by {image.author}</span>
                   )}
+                  {images.length > 1 && (
+                    <span className="text-sm opacity-75">
+                      {currentIndex + 1} / {images.length}
+                    </span>
+                  )}
                 </div>
-                {images.length > 1 && (
-                  <span className="text-sm opacity-75">
-                    {currentIndex + 1} / {images.length}
-                  </span>
-                )}
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleZoomOut}
-                  disabled={zoom <= 0.5}
-                  className="text-white hover:bg-white/20"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
+              {/* 액션 버튼들 */}
+              <div className="flex items-center justify-between md:justify-end space-x-2">
+                {/* 줌 컨트롤 - 모바일에서는 숨김 */}
+                <div className="hidden md:flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleZoomOut}
+                    disabled={zoom <= 0.5}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  
+                  <span className="text-sm px-2">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleZoomIn}
+                    disabled={zoom >= 3}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                  
+                  <Separator orientation="vertical" className="h-6 bg-white/20" />
+                </div>
                 
-                <span className="text-sm px-2">
-                  {Math.round(zoom * 100)}%
-                </span>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleZoomIn}
-                  disabled={zoom >= 3}
-                  className="text-white hover:bg-white/20"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                
-                <Separator orientation="vertical" className="h-6 bg-white/20" />
-                
-                <LikeButton
-                  imageId={image.id}
-                  initialCount={image.likes_count}
-                  initialLiked={isLiked(image.id)}
-                  onToggle={handleLikeToggle}
-                  size="sm"
-                  variant="ghost"
-                />
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowComments(!showComments)}
-                  className={`text-white hover:bg-white/20 ${showComments ? 'bg-white/20' : ''}`}
-                  title="댓글 보기"
-                >
-                  <MessageCircle className="h-4 w-4 mr-1" />
-                  {image.comments_count || 0}
-                </Button>
-                
-                <div className="[&>button]:text-white [&>button]:hover:bg-white/20">
-                  <ShareButton 
-                    image={image}
+                {/* 좋아요, 댓글, 공유, 다운로드 버튼 */}
+                <div className="flex items-center space-x-1 md:space-x-2">
+                  <LikeButton
+                    imageId={image.id}
+                    initialCount={image.likes_count}
+                    initialLiked={isLiked(image.id)}
+                    onToggle={handleLikeToggle}
                     size="sm"
                     variant="ghost"
                   />
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowComments(!showComments)}
+                    className={`text-white hover:bg-white/20 ${showComments ? 'bg-white/20' : ''}`}
+                    title="댓글 보기"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="ml-1 text-xs">{image.comments_count || 0}</span>
+                  </Button>
+                  
+                  <div className="[&>button]:text-white [&>button]:hover:bg-white/20">
+                    <ShareButton 
+                      image={image}
+                      size="sm"
+                      variant="ghost"
+                    />
+                  </div>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDownload}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClose}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDownload}
-                  className="text-white hover:bg-white/20"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClose}
-                  className="text-white hover:bg-white/20"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
