@@ -1,0 +1,402 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Search, Filter, Trash2, Edit3, Eye, MoreHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { imageService } from '@/lib/database';
+import { storageService } from '@/lib/storage';
+import type { Image } from '@/types';
+import { toast } from 'sonner';
+
+export default function ImageManagement() {
+  const [images, setImages] = useState<Image[]>([]);
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; imageId?: string }>({ open: false });
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'likes' | 'name' | 'size'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  useEffect(() => {
+    loadImages();
+  }, []);
+
+  const loadImages = async () => {
+    setIsLoading(true);
+    try {
+      const data = await imageService.getAll(50, 0);
+      setImages(data);
+    } catch (error) {
+      console.error('이미지 로드 실패:', error);
+      toast.error('이미지 목록을 불러올 수 없습니다');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      loadImages();
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const data = await imageService.search(searchQuery);
+      setImages(data);
+    } catch (error) {
+      console.error('검색 실패:', error);
+      toast.error('검색에 실패했습니다');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectImage = (imageId: string) => {
+    const newSelection = new Set(selectedImages);
+    if (newSelection.has(imageId)) {
+      newSelection.delete(imageId);
+    } else {
+      newSelection.add(imageId);
+    }
+    setSelectedImages(newSelection);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedImages.size === images.length) {
+      setSelectedImages(new Set());
+    } else {
+      setSelectedImages(new Set(images.map(img => img.id)));
+    }
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    try {
+      await imageService.delete(imageId);
+      setImages(prev => prev.filter(img => img.id !== imageId));
+      setDeleteDialog({ open: false });
+      toast.success('이미지가 삭제되었습니다');
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      toast.error('이미지 삭제에 실패했습니다');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const deletePromises = Array.from(selectedImages).map(id => imageService.delete(id));
+      await Promise.all(deletePromises);
+      
+      setImages(prev => prev.filter(img => !selectedImages.has(img.id)));
+      setSelectedImages(new Set());
+      setBulkDeleteDialog(false);
+      toast.success(`${selectedImages.size}개 이미지가 삭제되었습니다`);
+    } catch (error) {
+      console.error('일괄 삭제 실패:', error);
+      toast.error('이미지 삭제에 실패했습니다');
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const filteredAndSortedImages = images
+    .filter(image =>
+      image.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      image.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      image.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortBy) {
+        case 'date':
+          aValue = new Date(a.created_at).getTime();
+          bValue = new Date(b.created_at).getTime();
+          break;
+        case 'likes':
+          aValue = a.likes_count;
+          bValue = b.likes_count;
+          break;
+        case 'name':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'size':
+          aValue = a.file_size;
+          bValue = b.file_size;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+  return (
+    <div className="space-y-6">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">이미지 관리</h1>
+          <p className="text-gray-600">업로드된 이미지들을 관리하고 편집할 수 있습니다</p>
+        </div>
+      </div>
+
+      {/* 검색 및 필터 */}
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="이미지 제목, 설명, 태그로 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="pl-10"
+              />
+            </div>
+            <Button onClick={handleSearch}>
+              검색
+            </Button>
+          </div>
+          
+          <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  정렬: {sortBy === 'date' ? '날짜' : sortBy === 'likes' ? '좋아요' : sortBy === 'name' ? '이름' : '크기'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => { setSortBy('date'); setSortOrder('desc'); }}>
+                  최신순
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSortBy('date'); setSortOrder('asc'); }}>
+                  오래된순
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSortBy('likes'); setSortOrder('desc'); }}>
+                  좋아요 많은순
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>
+                  이름순
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSortBy('size'); setSortOrder('desc'); }}>
+                  용량 큰순
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Button
+              variant="outline"
+              onClick={handleSelectAll}
+            >
+              {selectedImages.size === images.length ? '전체 해제' : '전체 선택'}
+            </Button>
+            
+            {selectedImages.size > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setBulkDeleteDialog(true)}
+              >
+                선택 삭제 ({selectedImages.size})
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* 이미지 목록 */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="animate-pulse">
+                <div className="aspect-video bg-gray-200"></div>
+                <div className="p-4 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : filteredAndSortedImages.length === 0 ? (
+        <Card className="p-12 text-center">
+          <div className="text-gray-400 mb-4">
+            <Search className="h-16 w-16 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-600 mb-2">이미지를 찾을 수 없습니다</h3>
+          <p className="text-gray-500">검색 조건을 변경하거나 새로운 이미지를 업로드해보세요.</p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAndSortedImages.map((image) => (
+            <Card key={image.id} className="overflow-hidden">
+              {/* 이미지 */}
+              <div className="relative aspect-video">
+                <input
+                  type="checkbox"
+                  checked={selectedImages.has(image.id)}
+                  onChange={() => handleSelectImage(image.id)}
+                  className="absolute top-3 left-3 z-10 w-4 h-4"
+                />
+                <img
+                  src={image.thumbnail_url}
+                  alt={image.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* 정보 */}
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-medium text-gray-900 truncate flex-1">
+                    {image.title}
+                  </h3>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="ml-2">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => window.open(image.url, '_blank')}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        보기
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          // TODO: 이미지 편집 모달 구현
+                          toast.info('이미지 편집 기능은 개발 중입니다');
+                        }}
+                      >
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        편집
+                      </DropdownMenuItem>
+                      <Separator />
+                      <DropdownMenuItem
+                        onClick={() => setDeleteDialog({ open: true, imageId: image.id })}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        삭제
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {image.description && (
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {image.description}
+                  </p>
+                )}
+
+                {/* 태그 */}
+                {image.tags && image.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {image.tags.slice(0, 3).map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {image.tags.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{image.tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
+                {/* 메타 정보 */}
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{formatDate(image.created_at)}</span>
+                  <span>{formatFileSize(image.file_size)}</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                  {image.width && image.height && (
+                    <span>{image.width} × {image.height}</span>
+                  )}
+                  <span>{image.likes_count} 좋아요</span>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* 개별 삭제 확인 다이얼로그 */}
+      <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>이미지 삭제</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600">
+            이 이미지를 삭제하시겠습니까? 삭제된 이미지는 복구할 수 없습니다.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog({ open: false })}>
+              취소
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteDialog.imageId && handleDeleteImage(deleteDialog.imageId)}
+            >
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 일괄 삭제 확인 다이얼로그 */}
+      <Dialog open={bulkDeleteDialog} onOpenChange={setBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>선택된 이미지 삭제</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600">
+            선택된 {selectedImages.size}개의 이미지를 삭제하시겠습니까? 삭제된 이미지는 복구할 수 없습니다.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteDialog(false)}>
+              취소
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete}>
+              {selectedImages.size}개 삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

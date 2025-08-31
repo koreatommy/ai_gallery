@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Gallery
 
-## Getting Started
+AI 생성 이미지를 위한 갤러리 애플리케이션입니다. Next.js, Supabase, TypeScript를 사용하여 구축되었습니다.
 
-First, run the development server:
+## 주요 기능
+
+- 🖼️ 이미지 업로드 및 갤러리 표시
+- 🔍 카테고리별 필터링 및 검색
+- ❤️ 좋아요 및 댓글 기능
+- 📱 반응형 디자인
+- ⚡ 실시간 업데이트
+
+## 기술 스택
+
+- **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Storage, Auth)
+- **UI**: shadcn/ui 컴포넌트
+- **상태관리**: React Query
+
+## 시작하기
+
+### 1. 환경 변수 설정
+
+프로젝트 루트에 `.env.local` 파일을 생성하고 다음 내용을 추가하세요:
+
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Storage Configuration
+NEXT_PUBLIC_SUPABASE_STORAGE_URL=your_supabase_storage_url
+
+# Admin Configuration
+ADMIN_PASSWORD=your_admin_password
+```
+
+### 2. 의존성 설치
+
+```bash
+npm install
+```
+
+### 3. 개발 서버 실행
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 결과를 확인하세요.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 데이터베이스 설정
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Supabase 데이터베이스는 이미 설정되어 있습니다. 자세한 설정 내용은 다음 파일을 참조하세요:
 
-## Learn More
+- `database_setup.md` - 데이터베이스 스키마 설정
+- `storage_setup.md` - Storage 버킷 설정
+- `supabase_schema.sql` - 데이터베이스 스키마
 
-To learn more about Next.js, take a look at the following resources:
+## 프로젝트 구조
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/                 # Next.js App Router
+├── components/          # React 컴포넌트
+│   ├── gallery/        # 갤러리 관련 컴포넌트
+│   ├── ui/             # UI 컴포넌트
+│   └── layout/         # 레이아웃 컴포넌트
+├── hooks/              # 커스텀 훅
+├── lib/                # 유틸리티 및 설정
+└── types/              # TypeScript 타입 정의
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 배포
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+이 프로젝트는 Vercel에 배포할 수 있습니다. 자세한 내용은 [Next.js 배포 문서](https://nextjs.org/docs/app/building-your-application/deploying)를 참조하세요.
