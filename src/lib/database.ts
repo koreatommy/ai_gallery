@@ -1,9 +1,21 @@
 import { supabase } from './supabase';
 import type { Image, Category, Comment, Like } from '@/types';
 
+// 환경 변수 체크 함수
+const isSupabaseConfigured = () => {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL && 
+         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+         process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://dummy.supabase.co';
+};
+
 // 카테고리 관련 함수들
 export const categoryService = {
   async getAll(): Promise<Category[]> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 빈 카테고리 목록을 반환합니다.');
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('categories')
       .select('*')
@@ -58,6 +70,11 @@ export const categoryService = {
 // 이미지 관련 함수들
 export const imageService = {
   async getAll(limit = 20, offset = 0): Promise<Image[]> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 빈 이미지 목록을 반환합니다.');
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('image_stats')
       .select('*')

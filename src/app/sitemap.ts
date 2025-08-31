@@ -3,6 +3,25 @@ import { imageService } from '@/lib/database';
 import { SEOService } from '@/lib/seo';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // 환경 변수 체크
+  const isConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+                      process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://dummy.supabase.co';
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://ai-gallery-example.vercel.app';
+
+  if (!isConfigured) {
+    console.warn('Supabase가 설정되지 않았습니다. 기본 사이트맵을 반환합니다.');
+    return [
+      {
+        url: baseUrl,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 1,
+      },
+    ];
+  }
+
   try {
     // 최신 이미지들 가져오기 (sitemap에 포함할 용도)
     const images = await imageService.getAll(100, 0);
@@ -22,13 +41,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // 기본 사이트맵 반환
     return [
       {
-        url: process.env.NEXT_PUBLIC_BASE_URL || 'https://localhost:3000',
+        url: baseUrl,
         lastModified: new Date(),
         changeFrequency: 'daily',
         priority: 1,
       },
       {
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://localhost:3000'}/upload`,
+        url: `${baseUrl}/upload`,
         lastModified: new Date(),
         changeFrequency: 'weekly',
         priority: 0.8,
