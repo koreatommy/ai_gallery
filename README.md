@@ -74,3 +74,4 @@ src/
 ## 배포
 
 이 프로젝트는 Vercel에 배포할 수 있습니다. 자세한 내용은 [Next.js 배포 문서](https://nextjs.org/docs/app/building-your-application/deploying)를 참조하세요.
+# Vercel 배포 강제 업데이트
