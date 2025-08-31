@@ -105,8 +105,7 @@ export default function Home() {
                 onClick={handleAdminLogin}
                 className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
               >
-                <Shield className="w-4 h-4 mr-2" />
-                관리자
+                <Shield className="w-4 h-4" />
               </Button>
             </div>
           </div>

@@ -72,14 +72,14 @@ export default function HeroSection({ onUploadClick }: HeroSectionProps) {
           </div>
 
           {/* 메인 타이틀 */}
-          <h1 className={`text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <h1 className={`text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="bg-gradient-to-r from-yellow-200 via-pink-200 to-blue-200 bg-clip-text text-transparent animate-pulse">
               AI 생성형 이미지 컨테스트
             </span>
           </h1>
 
           {/* 서브 타이틀 */}
-          <p className={`text-lg md:text-xl lg:text-2xl text-white/90 mb-8 transition-all duration-1000 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <p className={`text-base md:text-lg lg:text-xl text-white/90 mb-8 transition-all duration-1000 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="flex items-center justify-center gap-2">
               <Sparkles className="w-5 h-5 text-yellow-300 animate-spin" />
               여러분 폰에 저장되어 있는 생성형 이미지를 올려 주세요
@@ -88,7 +88,7 @@ export default function HeroSection({ onUploadClick }: HeroSectionProps) {
           </p>
 
           {/* 설명 텍스트 */}
-          <p className={`text-base md:text-lg text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed transition-all duration-1000 delay-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <p className={`text-sm md:text-base text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed transition-all duration-1000 delay-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             AI가 생성한 놀라운 이미지들을 탐색하고, 좋아하는 작품에 좋아요를 누르고, 
             댓글로 소통하며 창의적인 영감을 얻어보세요.
           </p>
@@ -97,7 +97,7 @@ export default function HeroSection({ onUploadClick }: HeroSectionProps) {
           <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 transition-all duration-1000 delay-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <Button
               size="lg"
-              className="bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-600 hover:to-violet-600 text-white px-8 py-6 rounded-full text-lg font-semibold shadow-2xl hover:shadow-pink-500/25 transition-all duration-300 transform hover:scale-105"
+              className="bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-600 hover:to-violet-600 text-white px-6 py-4 rounded-full text-base font-semibold shadow-2xl hover:shadow-pink-500/25 transition-all duration-300 transform hover:scale-105"
               onClick={scrollToGallery}
             >
               갤러리 둘러보기
@@ -105,7 +105,7 @@ export default function HeroSection({ onUploadClick }: HeroSectionProps) {
             
             <Button
               size="lg"
-              className="bg-white/20 border-2 border-white/60 text-white hover:bg-white hover:text-gray-900 px-8 py-6 rounded-full text-lg font-semibold backdrop-blur-sm transition-all duration-300 transform hover:scale-105 shadow-lg"
+              className="bg-white/20 border-2 border-white/60 text-white hover:bg-white hover:text-gray-900 px-6 py-4 rounded-full text-base font-semibold backdrop-blur-sm transition-all duration-300 transform hover:scale-105 shadow-lg"
               onClick={onUploadClick || scrollToGallery}
             >
               작품 업로드하기
