@@ -21,8 +21,6 @@ export default function TestSupabase() {
         // Supabase 연결 테스트
         const { data, error } = await supabase.from('_test').select('*').limit(1);
         
-        console.log('데이터:', data);
-        
         if (error) {
           console.log('Supabase 에러:', error.message);
           if (error.message.includes('relation "_test" does not exist')) {

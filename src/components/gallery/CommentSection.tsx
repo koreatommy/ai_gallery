@@ -26,7 +26,7 @@ export default function CommentSection({
 
   useEffect(() => {
     loadComments();
-  }, [imageId, loadComments]);
+  }, [imageId]);
 
   const loadComments = async () => {
     setIsLoading(true);

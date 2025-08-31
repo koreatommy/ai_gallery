@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart3, Image as ImageIcon, Upload, Users, TrendingUp, Calendar, Database, Eye } from 'lucide-react';
+import { BarChart3, Image as ImageIcon, Upload, Users, TrendingUp, Calendar, Database, HardDrive, Eye } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { imageService, categoryService } from '@/lib/database';
-
+import { storageService } from '@/lib/storage';
 import type { Image, Category } from '@/types';
 
 interface DashboardStats {

@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { imageService } from '@/lib/database';
-
+import { storageService } from '@/lib/storage';
 import type { Image } from '@/types';
 import { toast } from 'sonner';
 
@@ -127,7 +127,7 @@ export default function ImageManagement() {
       image.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
-      let aValue: unknown, bValue: unknown;
+      let aValue: any, bValue: any;
       
       switch (sortBy) {
         case 'date':
