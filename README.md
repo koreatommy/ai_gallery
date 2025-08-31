@@ -25,23 +25,28 @@ AI 생성 이미지를 위한 갤러리 애플리케이션입니다. Next.js, Su
 
 ```env
 # Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_URL=https://qbpwxjullgynxpswquzb.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFicHd4anVsbGd5bnhwc3dxdXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTM0NjgsImV4cCI6MjA3MjAyOTQ2OH0.1eEF0fpxm-6BIhSRwdFSM7gzHw0JHGQO1h8sHyL77qk
 
 # Storage Configuration
-NEXT_PUBLIC_SUPABASE_STORAGE_URL=your_supabase_storage_url
-
-# Admin Configuration
-ADMIN_PASSWORD=your_admin_password
+NEXT_PUBLIC_SUPABASE_STORAGE_URL=https://qbpwxjullgynxpswquzb.supabase.co/storage/v1/object/public/images
 ```
 
-### 2. 의존성 설치
+### 2. 환경 변수 확인
+
+환경 변수가 올바르게 설정되었는지 확인:
+
+```bash
+npm run check-env
+```
+
+### 3. 의존성 설치
 
 ```bash
 npm install
 ```
 
-### 3. 개발 서버 실행
+### 4. 개발 서버 실행
 
 ```bash
 npm run dev
@@ -73,5 +78,50 @@ src/
 
 ## 배포
 
-이 프로젝트는 Vercel에 배포할 수 있습니다. 자세한 내용은 [Next.js 배포 문서](https://nextjs.org/docs/app/building-your-application/deploying)를 참조하세요.
-# Vercel 배포 강제 업데이트
+### Vercel 배포
+
+이 프로젝트는 Vercel에 배포할 수 있습니다. 자세한 배포 가이드는 `VERCEL_DEPLOYMENT_GUIDE.md`를 참조하세요.
+
+### 환경 변수 설정 (Vercel)
+
+Vercel 대시보드에서 다음 환경 변수를 설정해야 합니다:
+
+1. **Settings** → **Environment Variables**
+2. 다음 변수들을 추가:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### 배포 후 확인
+
+배포 완료 후 [https://ai-gallery-tau.vercel.app/test-supabase](https://ai-gallery-tau.vercel.app/test-supabase)에서 Supabase 연결 상태를 확인할 수 있습니다.
+
+## 유용한 명령어
+
+```bash
+# 개발 서버 실행
+npm run dev
+
+# 프로덕션 빌드
+npm run build
+
+# 환경 변수 확인
+npm run check-env
+
+# 린트 검사
+npm run lint
+```
+
+## 문제 해결
+
+### Supabase 연결 문제
+
+1. 환경 변수가 올바르게 설정되었는지 확인:
+   ```bash
+   npm run check-env
+   ```
+
+2. 연결 테스트 페이지 방문:
+   - 로컬: http://localhost:3000/test-supabase
+   - 배포: https://ai-gallery-tau.vercel.app/test-supabase
+
+3. 자세한 문제 해결 가이드는 `VERCEL_DEPLOYMENT_GUIDE.md`를 참조하세요.
