@@ -8,10 +8,12 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { imageService, categoryService } from '@/lib/database';
 import { storageService } from '@/lib/storage';
+import { useImageOptimization } from '@/hooks/useImageOptimization';
 import DashboardStats from './DashboardStats';
 import ActivityLog from './ActivityLog';
 import SystemStatus from './SystemStatus';
 import type { Image, Category } from '@/types';
+import { toast } from 'sonner';
 
 interface DashboardData {
   totalImages: number;
@@ -27,6 +29,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+
+  // 이미지 최적화 훅
+  const { getAdminThumbnailUrl } = useImageOptimization();
 
   useEffect(() => {
     loadDashboardData();
@@ -103,6 +108,7 @@ export default function AdminDashboard() {
       minute: '2-digit'
     });
   };
+
 
   if (isLoading) {
     return (
@@ -262,7 +268,7 @@ export default function AdminDashboard() {
           {stats.topImages.slice(0, 6).map((image) => (
             <div key={image.id} className="group relative">
               <img
-                src={image.thumbnail_url}
+                src={getAdminThumbnailUrl(image.url, 300, 300)}
                 alt={image.title}
                 className="w-full aspect-square rounded-lg object-cover group-hover:opacity-80 transition-opacity"
               />

@@ -117,6 +117,30 @@ export function useImageOptimization(options: UseImageOptimizationOptions = {}) 
     return url.toString();
   }, [state.isSupportsWebP]);
 
+  // 관리자용 고품질 썸네일 URL 생성
+  const getAdminThumbnailUrl = useCallback((
+    originalUrl: string,
+    width = 600,
+    height = 400
+  ): string => {
+    if (!originalUrl) return '';
+
+    // Supabase Transform API 사용 (관리자용 고품질)
+    const url = new URL(originalUrl);
+    const params = new URLSearchParams();
+
+    params.set('width', width.toString());
+    params.set('height', height.toString());
+    if (state.isSupportsWebP) params.set('format', 'webp');
+    params.set('quality', '90'); // 관리자용 고품질
+
+    if (params.toString()) {
+      url.search = params.toString();
+    }
+
+    return url.toString();
+  }, [state.isSupportsWebP]);
+
   // 이미지 압축
   const compressImage = useCallback(async (file: File, options?: {
     width?: number;
@@ -220,6 +244,7 @@ export function useImageOptimization(options: UseImageOptimizationOptions = {}) 
     // 메서드
     preloadImages,
     getOptimizedImageUrl,
+    getAdminThumbnailUrl,
     compressImage,
     generateThumbnail,
     trackImageLoad,

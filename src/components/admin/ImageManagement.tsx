@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { imageService, categoryService } from '@/lib/database';
 import { storageService } from '@/lib/storage';
+import { useImageOptimization } from '@/hooks/useImageOptimization';
 import type { Image, Category } from '@/types';
 import { toast } from 'sonner';
 
@@ -33,6 +34,9 @@ export default function ImageManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
+
+  // 이미지 최적화 훅
+  const { getAdminThumbnailUrl } = useImageOptimization();
 
   useEffect(() => {
     loadImages();
@@ -446,7 +450,7 @@ export default function ImageManagement() {
                   className="absolute top-3 left-3 z-10 w-4 h-4"
                 />
                 <img
-                  src={image.thumbnail_url}
+                  src={getAdminThumbnailUrl(image.url, 600, 400)}
                   alt={image.title}
                   className="w-full h-full object-cover"
                 />
