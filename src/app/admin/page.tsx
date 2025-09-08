@@ -84,11 +84,6 @@ export default function AdminPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
-              개발용 비밀번호: admin123
-            </p>
-          </div>
         </Card>
       </div>
     );

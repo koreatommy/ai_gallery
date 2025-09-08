@@ -32,9 +32,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 # Storage Configuration
 NEXT_PUBLIC_SUPABASE_STORAGE_URL=https://qbpwxjullgynxpswquzb.supabase.co/storage/v1/object/public/images
+
+# Admin Configuration (운영환경에서는 반드시 강력한 비밀번호로 변경하세요)
+ADMIN_PASSWORD=your_secure_admin_password
 ```
 
-### 2. 환경 변수 확인
+### 2. 보안 설정
+
+**⚠️ 중요: 운영환경 배포 전 보안 설정**
+
+1. **관리자 비밀번호 변경**: `.env.local` 파일에서 `ADMIN_PASSWORD`를 강력한 비밀번호로 변경하세요.
+2. **환경변수 보호**: `.env.local` 파일은 절대 Git에 커밋하지 마세요.
+3. **기본 비밀번호**: 개발환경에서만 `admin123`이 기본값으로 사용됩니다.
+
+### 3. 환경 변수 확인
 
 환경 변수가 올바르게 설정되었는지 확인:
 
