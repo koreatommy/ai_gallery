@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Trash2, Edit3, Eye, MoreHorizontal } from 'lucide-react';
+import { Search, Filter, Trash2, Edit3, Eye, MoreHorizontal, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -9,24 +9,46 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { imageService } from '@/lib/database';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { imageService, categoryService } from '@/lib/database';
 import { storageService } from '@/lib/storage';
-import type { Image } from '@/types';
+import type { Image, Category } from '@/types';
 import { toast } from 'sonner';
 
 export default function ImageManagement() {
   const [images, setImages] = useState<Image[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; imageId?: string }>({ open: false });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
+  const [categoryChangeDialog, setCategoryChangeDialog] = useState<{ open: boolean; imageId?: string; currentCategoryId?: string }>({ open: false });
   const [sortBy, setSortBy] = useState<'date' | 'likes' | 'name' | 'size'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     loadImages();
+    loadCategories();
   }, []);
+
+  // 카테고리 필터 변경 시 자동 검색
+  useEffect(() => {
+    if (categories.length > 0) {
+      handleSearch();
+    }
+  }, [selectedCategory]);
+
+  const loadCategories = async () => {
+    try {
+      const data = await categoryService.getAll();
+      setCategories(data);
+    } catch (error) {
+      console.error('카테고리 로드 실패:', error);
+      toast.error('카테고리 목록을 불러올 수 없습니다');
+    }
+  };
 
   const loadImages = async () => {
     setIsLoading(true);
@@ -42,14 +64,35 @@ export default function ImageManagement() {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadImages();
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const data = await imageService.search(searchQuery);
+      let data: Image[];
+      
+      if (searchQuery.trim() && selectedCategory && selectedCategory !== 'all') {
+        // 검색어와 카테고리 모두 있는 경우
+        if (selectedCategory === 'none') {
+          const searchResults = await imageService.search(searchQuery.trim());
+          data = searchResults.filter(img => !img.category_id);
+        } else {
+          const searchResults = await imageService.search(searchQuery.trim());
+          data = searchResults.filter(img => img.category_id === selectedCategory);
+        }
+      } else if (searchQuery.trim()) {
+        // 검색어만 있는 경우
+        data = await imageService.search(searchQuery.trim());
+      } else if (selectedCategory && selectedCategory !== 'all') {
+        // 카테고리만 있는 경우
+        if (selectedCategory === 'none') {
+          const allImages = await imageService.getAll(50, 0);
+          data = allImages.filter(img => !img.category_id);
+        } else {
+          data = await imageService.getByCategory(selectedCategory, 50, 0);
+        }
+      } else {
+        // 둘 다 없는 경우 전체 로드
+        data = await imageService.getAll(50, 0);
+      }
+      
       setImages(data);
     } catch (error) {
       console.error('검색 실패:', error);
@@ -104,6 +147,31 @@ export default function ImageManagement() {
     }
   };
 
+  const handleCategoryChange = async (imageId: string, newCategoryId: string | null) => {
+    try {
+      await imageService.update(imageId, { category_id: newCategoryId });
+      
+      // 로컬 상태 업데이트
+      setImages(prev => prev.map(img => 
+        img.id === imageId 
+          ? { ...img, category_id: newCategoryId }
+          : img
+      ));
+      
+      setCategoryChangeDialog({ open: false });
+      toast.success('카테고리가 변경되었습니다');
+    } catch (error) {
+      console.error('카테고리 변경 실패:', error);
+      toast.error('카테고리 변경에 실패했습니다');
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('all');
+    loadImages();
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR', {
       year: 'numeric',
@@ -120,12 +188,30 @@ export default function ImageManagement() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return '카테고리 없음';
+    const category = categories.find(c => c.id === categoryId);
+    return category ? category.name : '알 수 없는 카테고리';
+  };
+
   const filteredAndSortedImages = images
-    .filter(image =>
-      image.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      image.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      image.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    .filter(image => {
+      // 검색어 필터링 (이미 API에서 처리되었지만 추가 필터링)
+      const matchesSearch = !searchQuery.trim() || 
+        image.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      // 카테고리 필터링 (이미 API에서 처리되었지만 추가 필터링)
+      let matchesCategory = true;
+      if (selectedCategory === 'none') {
+        matchesCategory = !image.category_id;
+      } else if (selectedCategory !== 'all') {
+        matchesCategory = image.category_id === selectedCategory;
+      }
+      
+      return matchesSearch && matchesCategory;
+    })
     .sort((a, b) => {
       let aValue: any, bValue: any;
       
@@ -181,6 +267,27 @@ export default function ImageManagement() {
                 className="pl-10"
               />
             </div>
+            
+            {/* 카테고리 필터 */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="카테고리 선택">
+                  {selectedCategory === 'all' ? '모든 카테고리' : 
+                   selectedCategory === 'none' ? '카테고리 없음' : 
+                   getCategoryName(selectedCategory)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">모든 카테고리</SelectItem>
+                <SelectItem value="none">카테고리 없음</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             <Button onClick={handleSearch}>
               검색
             </Button>
@@ -220,6 +327,16 @@ export default function ImageManagement() {
               {selectedImages.size === images.length ? '전체 해제' : '전체 선택'}
             </Button>
             
+            {(searchQuery || selectedCategory !== 'all') && (
+              <Button
+                variant="outline"
+                onClick={handleClearFilters}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                필터 초기화
+              </Button>
+            )}
+            
             {selectedImages.size > 0 && (
               <Button
                 variant="destructive"
@@ -253,7 +370,21 @@ export default function ImageManagement() {
             <Search className="h-16 w-16 mx-auto" />
           </div>
           <h3 className="text-lg font-medium text-gray-600 mb-2">이미지를 찾을 수 없습니다</h3>
-          <p className="text-gray-500">검색 조건을 변경하거나 새로운 이미지를 업로드해보세요.</p>
+          <p className="text-gray-500">
+            {searchQuery || selectedCategory !== 'all'
+              ? '검색 조건을 변경하거나 필터를 초기화해보세요.' 
+              : '새로운 이미지를 업로드해보세요.'
+            }
+          </p>
+          {(searchQuery || selectedCategory !== 'all') && (
+            <Button 
+              variant="outline" 
+              onClick={handleClearFilters}
+              className="mt-4"
+            >
+              필터 초기화
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -320,6 +451,35 @@ export default function ImageManagement() {
                     {image.description}
                   </p>
                 )}
+
+                {/* 카테고리 */}
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Tag className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">카테고리</span>
+                  </div>
+                  <Select
+                    value={image.category_id || ''}
+                    onValueChange={(value) => {
+                      const newCategoryId = value === 'none' ? null : value;
+                      handleCategoryChange(image.id, newCategoryId);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="카테고리 선택">
+                        {getCategoryName(image.category_id)}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">카테고리 없음</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {/* 태그 */}
                 {image.tags && image.tags.length > 0 && (
