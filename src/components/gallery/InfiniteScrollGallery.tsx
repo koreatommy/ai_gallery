@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MasonryGallery from './MasonryGallery';
 import ImageLightbox from './ImageLightbox';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { usePagination } from '@/hooks/useInfiniteScroll';
 import { likeService } from '@/lib/database';
 import type { Image } from '@/types';
 import { toast } from 'sonner';
@@ -25,13 +25,19 @@ export default function InfiniteScrollGallery({
   const {
     images,
     isLoading,
-    isLoadingMore,
     isError,
     error,
-    hasMore,
-    loadMore,
-    refresh
-  } = useInfiniteScroll({
+    refresh,
+    currentPage,
+    totalCount,
+    totalPages,
+    limit,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
+    hasNextPage,
+    hasPrevPage
+  } = usePagination({
     searchQuery,
     categoryId,
     limit: 20
@@ -104,6 +110,28 @@ export default function InfiniteScrollGallery({
 
   return (
     <div>
+      {/* 페이징 정보 표시 */}
+      {!searchQuery && !categoryId && totalCount > 0 && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                <span className="font-medium text-gray-900">{totalCount.toLocaleString()}</span>개의 작품
+              </div>
+              <div className="text-sm text-gray-500">
+                페이지 {currentPage} / {totalPages}
+              </div>
+              <div className="text-sm text-gray-500">
+                현재 {images.length}개 표시 중
+              </div>
+            </div>
+            <div className="text-sm text-gray-500">
+              한 페이지당 {limit}개씩 로드
+            </div>
+          </div>
+        </div>
+      )}
+
       <MasonryGallery
         images={images}
         loading={isLoading && images.length === 0}
@@ -111,29 +139,73 @@ export default function InfiniteScrollGallery({
         onLikeToggle={handleLikeToggle}
       />
 
-      {/* 더 보기 버튼 또는 로딩 */}
-      {isLoadingMore && (
-        <div className="flex justify-center py-8">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-            <span className="text-blue-600">더 많은 이미지를 불러오는 중...</span>
-          </div>
-        </div>
-      )}
+      {/* 페이징 UI */}
+      {!searchQuery && !categoryId && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 py-8">
+          {/* 이전 페이지 버튼 */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPrevPage}
+            disabled={!hasPrevPage}
+            className="flex items-center gap-1"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            이전
+          </Button>
 
-      {!isLoading && !isLoadingMore && hasMore && images.length > 0 && (
-        <div className="flex justify-center py-8">
-          <Button onClick={loadMore} variant="outline" className="bg-white hover:bg-gray-50">
-            더 보기
+          {/* 페이지 번호들 */}
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(pageNum)}
+                  className={`w-10 h-10 ${
+                    currentPage === pageNum
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* 다음 페이지 버튼 */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNextPage}
+            disabled={!hasNextPage}
+            className="flex items-center gap-1"
+          >
+            다음
+            <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       )}
 
-      {!isLoading && !isLoadingMore && !hasMore && images.length > 0 && (
+      {/* 검색/필터 결과일 때는 페이징 숨김 */}
+      {(searchQuery || categoryId) && images.length > 0 && (
         <div className="text-center py-8 text-gray-500">
           <div className="inline-flex items-center gap-2">
             <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-            <span>모든 이미지를 불러왔습니다</span>
+            <span>{images.length}개의 결과를 찾았습니다</span>
             <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
           </div>
         </div>

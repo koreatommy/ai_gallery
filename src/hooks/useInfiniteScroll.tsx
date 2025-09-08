@@ -5,23 +5,21 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { imageService } from '@/lib/database';
 import type { Image } from '@/types';
 
-interface UseInfiniteScrollOptions {
+interface UsePaginationOptions {
   limit?: number;
   searchQuery?: string;
   categoryId?: string;
   enabled?: boolean;
 }
 
-export function useInfiniteScroll({
+export function usePagination({
   limit = 20,
   searchQuery = '',
   categoryId = '',
   enabled = true
-}: UseInfiniteScrollOptions = {}) {
-  const [images, setImages] = useState<Image[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+}: UsePaginationOptions = {}) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const queryClient = useQueryClient();
   
   // 이전 필터 값을 추적하여 변경 감지
@@ -36,10 +34,8 @@ export function useInfiniteScroll({
   useEffect(() => {
     if (filtersChanged) {
       console.log('필터 변경 감지:', { searchQuery, categoryId });
-      setImages([]);
-      setOffset(0);
-      setHasMore(true);
-      setIsLoadingMore(false);
+      setCurrentPage(1);
+      setTotalCount(0);
       prevFiltersRef.current = { searchQuery, categoryId };
       
       // 기존 쿼리 캐시 무효화
@@ -50,13 +46,25 @@ export function useInfiniteScroll({
     }
   }, [searchQuery, categoryId, filtersChanged, queryClient]);
 
-  // 고유한 쿼리 키 생성 (offset 제외)
+  // 고유한 쿼리 키 생성
   const baseQueryKey = ['images', searchQuery, categoryId];
+  const offset = (currentPage - 1) * limit;
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: [...baseQueryKey, offset],
+  // 총 개수 쿼리 (필터가 없을 때만)
+  const { data: totalCountData } = useQuery({
+    queryKey: [...baseQueryKey, 'count'],
     queryFn: async () => {
-      console.log(`데이터 로드: offset=${offset}, search="${searchQuery}", category="${categoryId}"`);
+      if (searchQuery || categoryId) return 0; // 검색이나 카테고리 필터가 있으면 총 개수 계산 안함
+      return await imageService.getTotalCount();
+    },
+    enabled: enabled && !searchQuery && !categoryId,
+    staleTime: 5 * 60 * 1000, // 5분
+  });
+
+  const { data: images, isLoading, isError, error } = useQuery({
+    queryKey: [...baseQueryKey, currentPage],
+    queryFn: async () => {
+      console.log(`데이터 로드: page=${currentPage}, offset=${offset}, search="${searchQuery}", category="${categoryId}"`);
       let result: Image[];
       
       if (searchQuery && searchQuery.trim()) {
@@ -75,81 +83,58 @@ export function useInfiniteScroll({
     retry: 2,
   });
 
-  // 데이터 업데이트 처리
+  // 총 개수 업데이트
   useEffect(() => {
-    if (data) {
-      console.log(`데이터 수신: ${data.length}개, offset=${offset}`);
-      
-      if (offset === 0) {
-        // 첫 로드 또는 필터 변경 후 첫 로드
-        setImages(data);
-      } else {
-        // 추가 로드 (무한 스크롤)
-        setImages(prev => {
-          const newImages = [...prev, ...data];
-          console.log(`이미지 총 개수: ${newImages.length}`);
-          return newImages;
-        });
-      }
-      
-      // 더 이상 데이터가 없는 경우
-      if (data.length < limit) {
-        setHasMore(false);
-        console.log('더 이상 로드할 데이터 없음');
-      }
-      
-      setIsLoadingMore(false);
+    if (totalCountData !== undefined) {
+      setTotalCount(totalCountData);
     }
-  }, [data, offset, limit]);
+  }, [totalCountData]);
 
-  const loadMore = useCallback(() => {
-    if (!isLoading && !isLoadingMore && hasMore && !filtersChanged) {
-      console.log('더 많은 데이터 로드 시작');
-      setIsLoadingMore(true);
-      setOffset(prev => prev + limit);
+  // 페이지 이동 함수들
+  const goToPage = useCallback((page: number) => {
+    const totalPages = Math.ceil(totalCount / limit);
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
     }
-  }, [isLoading, isLoadingMore, hasMore, limit, filtersChanged]);
+  }, [totalCount, limit]);
+
+  const goToNextPage = useCallback(() => {
+    const totalPages = Math.ceil(totalCount / limit);
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [currentPage, totalCount, limit]);
+
+  const goToPrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [currentPage]);
 
   const refresh = useCallback(() => {
     console.log('데이터 새로고침');
-    setImages([]);
-    setOffset(0);
-    setHasMore(true);
-    setIsLoadingMore(false);
+    setCurrentPage(1);
+    setTotalCount(0);
     queryClient.invalidateQueries({ 
       queryKey: baseQueryKey, 
       exact: false 
     });
   }, [queryClient, baseQueryKey]);
 
-  // 무한 스크롤 이벤트 리스너
-  useEffect(() => {
-    const handleScroll = () => {
-      if (
-        enabled &&
-        !isLoading &&
-        !isLoadingMore &&
-        hasMore &&
-        !filtersChanged &&
-        window.innerHeight + document.documentElement.scrollTop 
-        >= document.documentElement.offsetHeight - 800
-      ) {
-        loadMore();
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [enabled, isLoading, isLoadingMore, hasMore, loadMore, filtersChanged]);
-
   return {
-    images,
-    isLoading: isLoading && offset === 0, // 첫 로드만 로딩으로 표시
-    isLoadingMore,
+    images: images || [],
+    isLoading,
     isError,
     error,
-    hasMore,
-    loadMore,
-    refresh
+    refresh,
+    currentPage,
+    totalCount,
+    totalPages: Math.ceil(totalCount / limit),
+    limit,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
+    hasNextPage: currentPage < Math.ceil(totalCount / limit),
+    hasPrevPage: currentPage > 1
   };
 }

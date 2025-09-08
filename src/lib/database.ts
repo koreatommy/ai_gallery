@@ -85,6 +85,19 @@ export const imageService = {
     return data || [];
   },
 
+  async getTotalCount(): Promise<number> {
+    if (!isSupabaseConfigured()) {
+      return 0;
+    }
+    
+    const { count, error } = await supabase
+      .from('image_stats')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) throw error;
+    return count || 0;
+  },
+
   async getById(id: string): Promise<Image | null> {
     const { data, error } = await supabase
       .from('image_stats')
