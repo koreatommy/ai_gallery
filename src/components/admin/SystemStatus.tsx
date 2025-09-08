@@ -15,6 +15,18 @@ import {
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/button';
 import { Button } from '@/components/ui/button';
+import { 
+  checkDatabaseStatus, 
+  checkStorageStatus, 
+  checkApiStatus, 
+  checkCdnStatus,
+  formatBytes,
+  formatResponseTime,
+  type DatabaseStatus,
+  type StorageStatus,
+  type ApiStatus,
+  type CdnStatus
+} from '@/lib/systemMonitor';
 
 interface SystemStatusItem {
   id: string;
@@ -40,46 +52,103 @@ export default function SystemStatus() {
   const loadSystemStatus = async () => {
     setIsLoading(true);
     try {
-      // 실제 시스템 상태를 확인하는 로직
-      const mockStatus: SystemStatusItem[] = [
+      // 실제 시스템 상태를 병렬로 확인
+      const [dbStatus, storageStatus, apiStatus, cdnStatus] = await Promise.all([
+        checkDatabaseStatus(),
+        checkStorageStatus(),
+        checkApiStatus(),
+        checkCdnStatus()
+      ]);
+
+      const statusItems: SystemStatusItem[] = [
         {
           id: 'database',
           name: '데이터베이스',
-          status: 'healthy',
-          value: '연결됨',
-          description: 'Supabase 연결 정상',
+          status: dbStatus.isConnected ? 'healthy' : 'error',
+          value: dbStatus.isConnected ? `응답 시간 ${formatResponseTime(dbStatus.responseTime)}` : '연결 실패',
+          description: dbStatus.isConnected 
+            ? 'Supabase 연결 정상' 
+            : dbStatus.error || '데이터베이스 연결 실패',
           icon: Database
         },
         {
           id: 'storage',
           name: '스토리지',
-          status: 'healthy',
-          value: '2.1GB / 5GB',
-          description: '사용 가능한 용량 충분',
+          status: storageStatus.usagePercentage > 90 ? 'error' : 
+                  storageStatus.usagePercentage > 80 ? 'warning' : 'healthy',
+          value: `${formatBytes(storageStatus.totalUsed)} / ${formatBytes(storageStatus.totalLimit)}`,
+          description: storageStatus.error || 
+            (storageStatus.usagePercentage > 90 ? '용량 부족 위험' : 
+             storageStatus.usagePercentage > 80 ? '용량 부족 경고' : '사용 가능한 용량 충분'),
           icon: HardDrive
         },
         {
           id: 'api',
           name: 'API 서버',
-          status: 'healthy',
-          value: '응답 시간 120ms',
-          description: '정상 응답 중',
+          status: apiStatus.isHealthy ? 'healthy' : 'warning',
+          value: `응답 시간 ${formatResponseTime(apiStatus.responseTime)}`,
+          description: apiStatus.error || 
+            (apiStatus.isHealthy ? '정상 응답 중' : '응답 시간 지연'),
           icon: Server
         },
         {
           id: 'cdn',
           name: 'CDN',
-          status: 'warning',
-          value: '지연 2.1s',
-          description: '일부 지역에서 지연 발생',
+          status: cdnStatus.isHealthy ? 'healthy' : 'warning',
+          value: `로딩 시간 ${formatResponseTime(cdnStatus.averageLoadTime)}`,
+          description: cdnStatus.error || 
+            (cdnStatus.isHealthy ? '정상 로딩' : '로딩 지연 발생'),
           icon: Wifi
         }
       ];
 
-      setStatusItems(mockStatus);
+      setStatusItems(statusItems);
       setLastUpdated(new Date());
+      
+      // 디버깅을 위한 콘솔 로그
+      console.log('시스템 상태 디버깅:', {
+        database: { status: dbStatus.isConnected ? 'healthy' : 'error', responseTime: dbStatus.responseTime },
+        storage: { status: storageStatus.usagePercentage > 90 ? 'error' : storageStatus.usagePercentage > 80 ? 'warning' : 'healthy', usage: storageStatus.usagePercentage },
+        api: { status: apiStatus.isHealthy ? 'healthy' : 'warning', responseTime: apiStatus.responseTime },
+        cdn: { status: cdnStatus.isHealthy ? 'healthy' : 'warning', loadTime: cdnStatus.averageLoadTime }
+      });
     } catch (error) {
       console.error('시스템 상태 로드 실패:', error);
+      // 오류 발생 시 기본 상태 설정
+      setStatusItems([
+        {
+          id: 'database',
+          name: '데이터베이스',
+          status: 'error',
+          value: '확인 실패',
+          description: '상태 확인 중 오류 발생',
+          icon: Database
+        },
+        {
+          id: 'storage',
+          name: '스토리지',
+          status: 'error',
+          value: '확인 실패',
+          description: '상태 확인 중 오류 발생',
+          icon: HardDrive
+        },
+        {
+          id: 'api',
+          name: 'API 서버',
+          status: 'error',
+          value: '확인 실패',
+          description: '상태 확인 중 오류 발생',
+          icon: Server
+        },
+        {
+          id: 'cdn',
+          name: 'CDN',
+          status: 'error',
+          value: '확인 실패',
+          description: '상태 확인 중 오류 발생',
+          icon: Wifi
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
