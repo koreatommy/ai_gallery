@@ -99,17 +99,71 @@ export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
 }
 
 /**
- * 스토리지 사용량을 확인합니다
+ * 스토리지 사용량을 확인합니다 (개선된 버전)
  */
 export async function checkStorageStatus(): Promise<StorageStatus> {
   try {
-    // Supabase Storage API를 사용하여 사용량 조회
+    // 방법 1: SQL을 통한 정확한 스토리지 사용량 조회
+    const { data: storageData, error: sqlError } = await supabase
+      .rpc('get_storage_usage');
+    
+    if (!sqlError && storageData) {
+      // RPC 함수가 있는 경우 사용
+      return {
+        totalUsed: storageData.total_size || 0,
+        totalLimit: storageData.total_limit || (1 * 1024 * 1024 * 1024), // 1GB 기본값
+        usagePercentage: storageData.usage_percentage || 0,
+        lastChecked: new Date()
+      };
+    }
+    
+    // 방법 2: 직접 SQL 쿼리로 스토리지 사용량 조회
+    try {
+      const { data: directStorageData, error: directError } = await supabase
+        .from('storage.objects')
+        .select('metadata')
+        .not('metadata->size', 'is', null);
+      
+      if (!directError && directStorageData && directStorageData.length > 0) {
+        let totalUsed = 0;
+        let fileCount = 0;
+        
+        for (const obj of directStorageData) {
+          const size = obj.metadata?.size;
+          if (typeof size === 'number' && size > 0) {
+            totalUsed += size;
+            fileCount++;
+          }
+        }
+        
+        // Supabase 무료 플랜: 1GB 스토리지
+        const totalLimit = 1 * 1024 * 1024 * 1024; // 1GB
+        const usagePercentage = (totalUsed / totalLimit) * 100;
+        
+        console.log('SQL 쿼리로 조회한 스토리지 사용량:', {
+          totalUsed,
+          fileCount,
+          usagePercentage
+        });
+        
+        return {
+          totalUsed,
+          totalLimit,
+          usagePercentage,
+          lastChecked: new Date()
+        };
+      }
+    } catch (sqlError) {
+      console.warn('SQL 쿼리로 스토리지 조회 실패:', sqlError);
+    }
+    
+    // 방법 3: Storage API를 통한 대략적인 사용량 조회 (fallback)
     const { data: buckets, error } = await supabase.storage.listBuckets();
     
     if (error) {
       return {
         totalUsed: 0,
-        totalLimit: 0,
+        totalLimit: 1 * 1024 * 1024 * 1024, // 1GB
         usagePercentage: 0,
         error: error.message,
         lastChecked: new Date()
@@ -122,34 +176,24 @@ export async function checkStorageStatus(): Promise<StorageStatus> {
     // 각 버킷의 파일들을 확인하여 실제 사용량 계산
     for (const bucket of buckets) {
       try {
-        // 재귀적으로 모든 파일을 가져오기 위한 함수
-        const getAllFiles = async (path: string = ''): Promise<any[]> => {
-          const { data: files, error } = await supabase.storage
-            .from(bucket.name)
-            .list(path, { limit: 1000 });
-          
-          if (error || !files) return [];
-          
-          let allFiles = files.filter(file => file.name !== '.emptyFolderPlaceholder');
-          
-          // 폴더인 경우 재귀적으로 탐색
-          for (const file of files) {
-            if (file.metadata && file.metadata.mimetype === 'folder') {
-              const subFiles = await getAllFiles(path ? `${path}/${file.name}` : file.name);
-              allFiles = allFiles.concat(subFiles);
-            }
-          }
-          
-          return allFiles;
-        };
+        // 루트 레벨 파일들만 조회 (성능 최적화)
+        const { data: files, error: listError } = await supabase.storage
+          .from(bucket.name)
+          .list('', { limit: 1000 });
         
-        const files = await getAllFiles();
+        if (listError || !files) {
+          console.warn(`버킷 ${bucket.name} 파일 목록 조회 실패:`, listError);
+          continue;
+        }
+        
+        console.log(`버킷 ${bucket.name}에서 ${files.length}개 파일 발견`);
         
         // 파일 크기 합계 계산
         for (const file of files) {
-          if (file.metadata && file.metadata.size) {
+          if (file.metadata && file.metadata.size && file.name !== '.emptyFolderPlaceholder') {
             totalUsed += file.metadata.size;
             fileCount++;
+            console.log(`파일: ${file.name}, 크기: ${file.metadata.size} bytes`);
           }
         }
       } catch (bucketError) {
@@ -157,10 +201,37 @@ export async function checkStorageStatus(): Promise<StorageStatus> {
       }
     }
     
-    // Supabase 무료 플랜 기준으로 제한 설정
-    // 실제로는 프로젝트 설정에서 가져와야 함
-    const totalLimit = 1 * 1024 * 1024 * 1024; // 1GB (무료 플랜)
+    // 방법 4: 이미지 테이블을 통한 대략적인 사용량 추정
+    if (totalUsed === 0) {
+      try {
+        const { data: images, error: imagesError } = await supabase
+          .from('images')
+          .select('url, file_name');
+        
+        if (!imagesError && images && images.length > 0) {
+          // 이미지 개수 기반으로 대략적인 사용량 추정
+          // 평균 이미지 크기를 500KB로 가정
+          const averageImageSize = 500 * 1024; // 500KB
+          totalUsed = images.length * averageImageSize;
+          fileCount = images.length;
+          
+          console.log(`이미지 테이블 기반 추정: ${images.length}개 이미지, 추정 크기: ${totalUsed} bytes`);
+        }
+      } catch (imagesError) {
+        console.warn('이미지 테이블 조회 실패:', imagesError);
+      }
+    }
+    
+    // Supabase 무료 플랜: 1GB 스토리지
+    const totalLimit = 1 * 1024 * 1024 * 1024; // 1GB
     const usagePercentage = (totalUsed / totalLimit) * 100;
+    
+    console.log('최종 스토리지 사용량 계산:', {
+      totalUsed,
+      fileCount,
+      usagePercentage,
+      method: totalUsed > 0 ? 'Storage API' : '이미지 테이블 추정'
+    });
     
     return {
       totalUsed,
@@ -171,7 +242,7 @@ export async function checkStorageStatus(): Promise<StorageStatus> {
   } catch (error) {
     return {
       totalUsed: 0,
-      totalLimit: 0,
+      totalLimit: 1 * 1024 * 1024 * 1024, // 1GB
       usagePercentage: 0,
       error: error instanceof Error ? error.message : '알 수 없는 오류',
       lastChecked: new Date()
@@ -192,8 +263,15 @@ export async function checkApiStatus(): Promise<ApiStatus> {
       supabase.from('images').select('id').limit(1),
       // 2. 카테고리 테이블 조회
       supabase.from('categories').select('id').limit(1),
-      // 3. 사용자 테이블 조회 (있다면)
-      supabase.from('users').select('id').limit(1).catch(() => null)
+      // 3. 사용자 테이블 조회 (있다면) - Promise로 래핑
+      new Promise(async (resolve) => {
+        try {
+          const result = await supabase.from('users').select('id').limit(1);
+          resolve(result);
+        } catch (error) {
+          resolve(null);
+        }
+      })
     ];
     
     const results = await Promise.allSettled(apiTests);

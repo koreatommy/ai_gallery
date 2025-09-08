@@ -47,3 +47,38 @@ export interface User {
   avatar_url?: string;
   created_at: string;
 }
+
+export interface FooterSection {
+  id: string;
+  title: string;
+  description?: string;
+  order_index: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FooterLink {
+  id: string;
+  section_id: string;
+  title: string;
+  url: string;
+  target: '_self' | '_blank';
+  order_index: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SiteSetting {
+  id: string;
+  key: string;
+  value?: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FooterSectionWithLinks extends FooterSection {
+  links: FooterLink[];
+}
