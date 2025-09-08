@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import LikeButton from './LikeButton';
 import ShareButton from './ShareButton';
 import { useLikes } from '@/hooks/useLikes';
+import { useImageOptimization } from '@/hooks/useImageOptimization';
 import type { Image } from '@/types';
 
 interface MasonryGalleryProps {
@@ -34,6 +35,8 @@ export default function MasonryGallery({
 }: MasonryGalleryProps) {
   const [imageLoadStates, setImageLoadStates] = useState<Record<string, boolean>>({});
   const { toggleLike, isLiked, setMultipleImageLikeCounts } = useLikes();
+  const { getMobileThumbnailUrl } = useImageOptimization();
+  const [isMobile, setIsMobile] = useState(false);
 
   const handleImageLoad = (imageId: string) => {
     setImageLoadStates(prev => ({ ...prev, [imageId]: true }));
@@ -57,6 +60,18 @@ export default function MasonryGallery({
   const handleLikeToggle = async (imageId: string, newCount: number, isLiked: boolean) => {
     onLikeToggle?.(imageId);
   };
+
+  // 모바일 감지
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   if (loading) {
     return (
@@ -118,7 +133,7 @@ export default function MasonryGallery({
                     <Skeleton className="w-full aspect-[4/3]" />
                   )}
                   <img
-                    src={image.thumbnail_url}
+                    src={isMobile ? getMobileThumbnailUrl(image.url, 400) : image.thumbnail_url}
                     alt={image.title}
                     className={`
                       w-full object-cover transition-all duration-300

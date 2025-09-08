@@ -31,11 +31,24 @@ export default function AdminDashboard() {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
   // 이미지 최적화 훅
-  const { getAdminThumbnailUrl } = useImageOptimization();
+  const { getAdminThumbnailUrl, getMobileThumbnailUrl } = useImageOptimization();
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
   }, [selectedTimeRange]);
+
+  // 모바일 감지
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const loadDashboardData = async () => {
     setIsLoading(true);
@@ -268,7 +281,7 @@ export default function AdminDashboard() {
           {stats.topImages.slice(0, 6).map((image) => (
             <div key={image.id} className="group relative">
               <img
-                src={getAdminThumbnailUrl(image.url, 300, 300)}
+                src={isMobile ? getMobileThumbnailUrl(image.url, 400) : getAdminThumbnailUrl(image.url, 300, 300)}
                 alt={image.title}
                 className="w-full aspect-square rounded-lg object-cover group-hover:opacity-80 transition-opacity"
               />

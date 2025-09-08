@@ -141,6 +141,29 @@ export function useImageOptimization(options: UseImageOptimizationOptions = {}) 
     return url.toString();
   }, [state.isSupportsWebP]);
 
+  // 모바일용 고해상도 썸네일 URL 생성
+  const getMobileThumbnailUrl = useCallback((
+    originalUrl: string,
+    size = 400
+  ): string => {
+    if (!originalUrl) return '';
+
+    // Supabase Transform API 사용 (모바일용 고해상도)
+    const url = new URL(originalUrl);
+    const params = new URLSearchParams();
+
+    params.set('width', size.toString());
+    params.set('height', size.toString());
+    if (state.isSupportsWebP) params.set('format', 'webp');
+    params.set('quality', '85'); // 모바일용 고품질
+
+    if (params.toString()) {
+      url.search = params.toString();
+    }
+
+    return url.toString();
+  }, [state.isSupportsWebP]);
+
   // 이미지 압축
   const compressImage = useCallback(async (file: File, options?: {
     width?: number;
@@ -245,6 +268,7 @@ export function useImageOptimization(options: UseImageOptimizationOptions = {}) 
     preloadImages,
     getOptimizedImageUrl,
     getAdminThumbnailUrl,
+    getMobileThumbnailUrl,
     compressImage,
     generateThumbnail,
     trackImageLoad,

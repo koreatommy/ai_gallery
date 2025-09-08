@@ -34,7 +34,7 @@ npx tsc --noEmit
 - **폼 처리**: React Hook Form + Zod
 - **애니메이션**: Framer Motion
 - **레이아웃**: React Masonry CSS
-- **이미지 최적화**: Next.js Image
+- **이미지 최적화**: Next.js Image, Supabase Transform API
 - **아이콘**: Lucide React
 - **알림**: Sonner
 - **파일 업로드**: React Dropzone
@@ -57,7 +57,7 @@ src/
 │   ├── storage.ts   # Supabase Storage 서비스 (업로드, 삭제, URL 생성)
 │   ├── admin.ts     # 관리자 인증 및 권한 관리
 │   └── supabase.ts  # Supabase 클라이언트 설정
-├── hooks/           # 커스텀 훅 (무한스크롤, 좋아요, 디바운스 등)
+├── hooks/           # 커스텀 훅 (무한스크롤, 좋아요, 디바운스, 이미지 최적화 등)
 └── types/           # TypeScript 타입 정의
 ```
 
@@ -87,8 +87,9 @@ ADMIN_PASSWORD=admin123
 - **storage.ts**: Supabase Storage 서비스 계층
   - 이미지 업로드 (`originals`, `thumbnails`, `temp` 폴더별)
   - 이미지 삭제 및 URL 생성
-  - Supabase Transform을 사용한 썸네일 자동 생성
+  - Supabase Transform을 사용한 썸네일 자동 생성 (80% 품질)
   - 파일 검증 및 메타데이터 추출
+  - `getThumbnailUrl()`: 300x300, 80% 품질 썸네일 URL 생성
 
 - **admin.ts**: 관리자 인증 시스템
   - localStorage 기반 세션 관리 (24시간 만료)
@@ -154,8 +155,16 @@ const { data, isLoading, error } = useQuery({
 ### Supabase Transform 활용
 - 썸네일은 업로드시 별도 생성하지 않고 `storageService.getThumbnailUrl()` 사용
 - 실시간 리사이징으로 다양한 크기 지원
+- 80% 품질로 고품질 썸네일 제공
+- `useImageOptimization` 훅으로 통합된 이미지 최적화 관리
 
-## 최근 업데이트 (2025년 9월)
+## 최근 업데이트 (2025년 1월)
+
+### 🖼️ 이미지 품질 개선
+- **썸네일 품질 향상**: 70% → 80% 품질로 썸네일 화질 개선
+- **자동 최적화**: 새로 업로드되는 모든 이미지에 80% 품질 자동 적용
+- **Supabase Transform**: 실시간 이미지 리사이징 및 품질 최적화
+- **관리자 페이지 최적화**: `useImageOptimization` 훅을 통한 썸네일 URL 최적화
 
 ### 갤러리 기능 개선
 - **갤러리보기 섹션 추가**: 메인 페이지에 "갤러리보기" 섹션 헤더 추가
@@ -167,6 +176,7 @@ const { data, isLoading, error } = useQuery({
 - **카테고리 검색**: 이미지 관리 페이지에서 카테고리별 필터링 기능 추가
 - **정확한 카운트**: 카테고리별 이미지 수량을 서버사이드에서 정확하게 계산
 - **통계 대시보드**: 카테고리 관리 페이지에 총 카테고리, 활성 카테고리, 총 이미지 통계 추가
+- **UI 간소화**: 불필요한 썸네일 업데이트 버튼 제거로 관리자 페이지 정리
 
 ### 좋아요 시스템 대폭 개선
 - **사용자별 고유 ID**: `UserManager` 클래스로 브라우저별 고유 사용자 ID 생성 및 관리
@@ -181,6 +191,8 @@ const { data, isLoading, error } = useQuery({
 - **개선된 서비스**: `likeService`에 더 나은 에러 처리 및 `isLiked` 함수 추가
 - **훅 개선**: `useLikes` 훅에 낙관적 업데이트 및 사용자별 상태 관리 추가
 - **UI 개선**: `LikeButton` 컴포넌트의 에러 처리 및 사용자 피드백 강화
+- **이미지 최적화**: `useImageOptimization` 훅으로 통합된 이미지 처리 시스템
+- **성능 개선**: 관리자 페이지에서 최적화된 썸네일 URL 사용
 
 ## Git Repository
 

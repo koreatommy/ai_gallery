@@ -90,6 +90,13 @@ export const storageService = {
   },
 
   /**
+   * 모바일용 고해상도 썸네일 URL 생성
+   */
+  getMobileThumbnailUrl(path: string, size = 400): string {
+    return this.getResizedUrl(path, size, size, 85);
+  },
+
+  /**
    * 이미지 파일 검증
    */
   validateImageFile(file: File): { valid: boolean; error?: string } {
