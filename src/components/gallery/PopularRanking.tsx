@@ -5,6 +5,7 @@ import { Trophy, Heart, Eye, Crown, Medal, Award } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { imageService } from '@/lib/database';
+import { useImageOptimization } from '@/hooks/useImageOptimization';
 import type { Image } from '@/types';
 import { toast } from 'sonner';
 
@@ -15,6 +16,8 @@ interface PopularRankingProps {
 export default function PopularRanking({ onImageClick }: PopularRankingProps) {
   const [topImages, setTopImages] = useState<Image[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getMobileThumbnailUrl } = useImageOptimization();
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const loadTopImages = async () => {
@@ -30,6 +33,18 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
     };
 
     loadTopImages();
+  }, []);
+
+  // 모바일 감지
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const getRankIcon = (rank: number) => {
@@ -126,7 +141,7 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
               {/* 이미지 */}
               <div className="relative aspect-square overflow-hidden">
                 <img
-                  src={image.thumbnail_url || image.url}
+                  src={isMobile ? getMobileThumbnailUrl(image.url, 400) : (image.thumbnail_url || image.url)}
                   alt={image.title}
                   className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110 group-hover:brightness-110"
                 />
