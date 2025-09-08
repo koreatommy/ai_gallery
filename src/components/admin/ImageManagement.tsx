@@ -402,8 +402,8 @@ export default function ImageManagement() {
 
       {/* 이미지 목록 */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
             <Card key={i} className="overflow-hidden">
               <div className="animate-pulse">
                 <div className="aspect-video bg-gray-200"></div>
@@ -438,7 +438,7 @@ export default function ImageManagement() {
           )}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {images.map((image) => (
             <Card key={image.id} className="overflow-hidden">
               {/* 이미지 */}
