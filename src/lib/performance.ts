@@ -155,7 +155,7 @@ export class PerformanceService {
     return this.compressImage(file, {
       width: size,
       height: size,
-      quality: 0.7,
+      quality: 0.8,
       format: 'jpeg'
     });
   }

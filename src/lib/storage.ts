@@ -86,7 +86,7 @@ export const storageService = {
    * 썸네일 URL 생성
    */
   getThumbnailUrl(path: string, size = 300): string {
-    return this.getResizedUrl(path, size, size, 70);
+    return this.getResizedUrl(path, size, size, 80);
   },
 
   /**
