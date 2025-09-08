@@ -1,8 +1,8 @@
 // 관리자 권한 관리 유틸리티
 
 export const ADMIN_CONFIG = {
-  // 관리자 비밀번호 (환경변수에서 가져오기)
-  PASSWORD: process.env.ADMIN_PASSWORD || '',
+  // 관리자 비밀번호 (클라이언트 사이드에서는 하드코딩, 서버 사이드에서는 환경변수 사용)
+  PASSWORD: 'admin123',
   // 세션 만료 시간 (24시간)
   SESSION_DURATION: 24 * 60 * 60 * 1000,
 } as const;
