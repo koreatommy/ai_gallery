@@ -348,6 +348,58 @@ export const commentService = {
       .eq('id', id);
     
     if (error) throw error;
+  },
+
+  // 관리자용 함수들
+  async getAll(limit = 50, offset = 0): Promise<Comment[]> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 빈 댓글 목록을 반환합니다.');
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('comments')
+      .select(`
+        *,
+        images!inner(title, thumbnail_url)
+      `)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getRecent(limit = 10): Promise<Comment[]> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 빈 댓글 목록을 반환합니다.');
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('comments')
+      .select(`
+        *,
+        images!inner(title, thumbnail_url)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getTotalCount(): Promise<number> {
+    if (!isSupabaseConfigured()) {
+      return 0;
+    }
+    
+    const { count, error } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) throw error;
+    return count || 0;
   }
 };
 

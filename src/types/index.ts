@@ -31,6 +31,10 @@ export interface Comment {
   user_id: string;
   content: string;
   created_at: string;
+  images?: {
+    title: string;
+    thumbnail_url: string;
+  };
 }
 
 export interface Like {
