@@ -66,7 +66,7 @@ export default function LikeButton({
   };
 
   const sizeClasses = {
-    sm: 'h-6 w-6 p-1',
+    sm: 'h-auto w-auto p-1 min-h-6',
     md: 'h-8 w-8 p-2',
     lg: 'h-10 w-10 p-2.5'
   };
@@ -93,7 +93,7 @@ export default function LikeButton({
         'group'
       )}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 relative z-10">
         {/* 하트 아이콘 */}
         <div className="relative">
           <Heart
@@ -156,7 +156,7 @@ export default function LikeButton({
               exit={{ y: 10, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                'text-xs font-medium',
+                'text-xs font-medium relative z-10',
                 size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-base'
               )}
             >
@@ -166,9 +166,9 @@ export default function LikeButton({
         )}
       </div>
 
-      {/* 호버 효과 */}
+      {/* 호버 효과 - 배경만 적용하고 콘텐츠는 가리지 않도록 수정 */}
       <div className={cn(
-        'absolute inset-0 bg-red-500 opacity-0 group-hover:opacity-10 transition-opacity duration-200 rounded-full',
+        'absolute inset-0 bg-red-500 opacity-0 group-hover:opacity-10 transition-opacity duration-200 rounded-lg pointer-events-none z-0',
         isLiked && 'opacity-5'
       )} />
     </Button>

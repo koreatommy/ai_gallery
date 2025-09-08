@@ -44,17 +44,17 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
   const getRankBadge = (rank: number) => {
     switch (rank) {
       case 0: return (
-        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-yellow-500/25">
           1st
         </div>
       );
       case 1: return (
-        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-gray-300 to-gray-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-gray-300 to-gray-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-gray-500/25">
           2nd
         </div>
       );
       case 2: return (
-        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-amber-700 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-amber-700 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-amber-500/25">
           3rd
         </div>
       );
@@ -120,7 +120,7 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
             {getRankBadge(index)}
             
             <Card 
-              className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02] bg-white"
+              className="group overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-[1.05] bg-white border-2 border-transparent hover:border-gradient-to-r hover:from-yellow-400 hover:to-orange-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)]"
               onClick={() => onImageClick?.(image)}
             >
               {/* 이미지 */}
@@ -128,20 +128,26 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
                 <img
                   src={image.thumbnail_url || image.url}
                   alt={image.title}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110 group-hover:brightness-110"
                 />
                 
+                {/* 호버 오버레이 효과 */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                {/* 호버 시 글로우 효과 */}
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 via-orange-500/20 to-red-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
                 {/* 랭킹 오버레이 */}
-                <div className="absolute top-4 left-4 flex items-center gap-2">
+                <div className="absolute top-4 left-4 flex items-center gap-2 transition-all duration-300 group-hover:scale-110">
                   {getRankIcon(index)}
-                  <span className="text-white font-bold text-lg drop-shadow-lg">
+                  <span className="text-white font-bold text-lg drop-shadow-lg group-hover:drop-shadow-xl">
                     #{index + 1}
                   </span>
                 </div>
 
                 {/* 통계 오버레이 */}
-                <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-                  <Heart className="w-4 h-4 text-red-400" />
+                <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 transition-all duration-300 group-hover:bg-black/70 group-hover:scale-105 group-hover:shadow-lg">
+                  <Heart className="w-4 h-4 text-red-400 transition-colors duration-300 group-hover:text-red-300" />
                   <span className="text-white text-sm font-semibold">
                     {image.likes_count?.toLocaleString() || 0}
                   </span>
@@ -149,17 +155,12 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
               </div>
 
               {/* 카드 정보 */}
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-3 transition-all duration-300 group-hover:bg-gradient-to-br group-hover:from-yellow-50/50 group-hover:to-orange-50/50">
                 <div>
-                  <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                  <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-all duration-300 group-hover:scale-[1.02]">
                     {image.title}
                   </h3>
                   <div className="flex items-center space-x-2 mt-1">
-                    {image.author && (
-                      <span className="text-gray-500 text-sm">
-                        by {image.author}
-                      </span>
-                    )}
                     <span className="text-gray-400 text-sm">
                       {new Date(image.created_at).toLocaleDateString('ko-KR')}
                     </span>
@@ -174,13 +175,14 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
 
                 {/* 통계 정보 */}
                 <div className="space-y-2">
-                  {image.author && (
-                    <div className="text-xs text-gray-500">
-                      <span>작성자: {image.author}</span>
-                    </div>
-                  )}
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                     <div className="flex items-center gap-4 text-sm text-gray-500">
+                      {image.author && (
+                        <>
+                          <span>{image.author}</span>
+                          <span>•</span>
+                        </>
+                      )}
                       <div className="flex items-center gap-1">
                         <Heart className="w-4 h-4" />
                         <span>{image.likes_count?.toLocaleString() || 0}</span>

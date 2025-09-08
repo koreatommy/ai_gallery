@@ -18,10 +18,11 @@ import CategoryFilter from '@/components/gallery/CategoryFilter';
 import SearchBar from '@/components/gallery/SearchBar';
 import HeroSection from '@/components/layout/HeroSection';
 import PopularRanking from '@/components/gallery/PopularRanking';
+import ImageLightbox from '@/components/gallery/ImageLightbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { categoryService } from '@/lib/database';
 import { useLogoSettings } from '@/hooks/useSiteSettings';
-import type { Category } from '@/types';
+import type { Category, Image } from '@/types';
 import { toast } from 'sonner';
 
 // 아이콘 매핑
@@ -60,6 +61,8 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const queryClient = useQueryClient();
   const router = useRouter();
   const { logoText, logoIcon } = useLogoSettings();
@@ -96,6 +99,16 @@ export default function HomePage() {
 
   const handleAdminLogin = () => {
     router.push('/admin');
+  };
+
+  const handleImageClick = (image: Image) => {
+    setSelectedImage(image);
+    setIsLightboxOpen(true);
+  };
+
+  const handleCloseLightbox = () => {
+    setIsLightboxOpen(false);
+    setSelectedImage(null);
   };
 
   return (
@@ -199,7 +212,7 @@ export default function HomePage() {
         {/* 인기 작품 랭킹 - 필터가 없을 때만 표시 */}
         {!searchQuery && !selectedCategory && (
           <div className="mb-12">
-            <PopularRanking />
+            <PopularRanking onImageClick={handleImageClick} />
           </div>
         )}
 
@@ -224,6 +237,15 @@ export default function HomePage() {
           categoryId={selectedCategory}
         />
       </main>
+
+      {/* 인기작품 랭킹용 이미지 라이트박스 */}
+      {selectedImage && (
+        <ImageLightbox
+          image={selectedImage}
+          isOpen={isLightboxOpen}
+          onClose={handleCloseLightbox}
+        />
+      )}
 
       {/* 푸터 */}
       <footer className="bg-white border-t border-gray-200 mt-16">

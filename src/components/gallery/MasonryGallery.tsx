@@ -155,11 +155,6 @@ export default function MasonryGallery({
                   {image.title}
                 </h3>
                 
-                {image.author && (
-                  <p className="text-gray-500 text-sm mb-2">
-                    by {image.author}
-                  </p>
-                )}
                 
                 {image.description && !image.description.includes('업로드된 이미지:') && (
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">

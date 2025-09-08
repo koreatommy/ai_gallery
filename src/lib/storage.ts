@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { PerformanceService } from './performance';
 
 export interface UploadResult {
   url: string;
@@ -93,7 +94,7 @@ export const storageService = {
    */
   validateImageFile(file: File): { valid: boolean; error?: string } {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 50 * 1024 * 1024; // 50MB (Supabase 제한에 맞춤)
 
     if (!allowedTypes.includes(file.type)) {
       return {
@@ -105,7 +106,35 @@ export const storageService = {
     if (file.size > maxSize) {
       return {
         valid: false,
-        error: '파일 크기가 너무 큽니다. (최대 10MB)'
+        error: '파일 크기가 너무 큽니다. (최대 50MB) - 이미지 최적화를 통해 크기를 줄일 수 있습니다.'
+      };
+    }
+
+    return { valid: true };
+  },
+
+  /**
+   * 대용량 파일을 위한 경고 검증 (최적화 후 크기 예상)
+   */
+  validateLargeFile(file: File): { valid: boolean; warning?: string; estimatedSize?: number } {
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const warningThreshold = 20 * 1024 * 1024; // 20MB
+
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        warning: '파일이 매우 큽니다. 업로드 시간이 오래 걸릴 수 있습니다.'
+      };
+    }
+
+    if (file.size > warningThreshold) {
+      // WebP 압축 후 예상 크기 (대략 60-80% 감소)
+      const estimatedSize = file.size * 0.3; // 70% 압축 가정
+      
+      return {
+        valid: true,
+        warning: `대용량 파일입니다. 최적화 후 약 ${(estimatedSize / 1024 / 1024).toFixed(1)}MB로 압축될 예정입니다.`,
+        estimatedSize
       };
     }
 
@@ -135,6 +164,57 @@ export const storageService = {
 
       img.src = url;
     });
+  },
+
+  /**
+   * 이미지 최적화 (압축 + 포맷 변환)
+   */
+  async optimizeImage(file: File, options?: {
+    quality?: number;
+    width?: number;
+    height?: number;
+    format?: 'webp' | 'jpeg' | 'png';
+  }): Promise<File> {
+    const optimizationOptions = {
+      quality: options?.quality || 0.8,
+      width: options?.width || 1920,
+      height: options?.height || 1080,
+      format: options?.format || 'webp' as const
+    };
+
+    try {
+      const compressedBlob = await PerformanceService.compressImage(file, optimizationOptions);
+      
+      return new File([compressedBlob], file.name.replace(/\.[^/.]+$/, `.${optimizationOptions.format}`), {
+        type: `image/${optimizationOptions.format}`,
+        lastModified: Date.now()
+      });
+    } catch (error) {
+      console.error('이미지 최적화 실패:', error);
+      throw new Error('이미지 최적화에 실패했습니다.');
+    }
+  },
+
+  /**
+   * 최적화된 이미지 업로드
+   */
+  async uploadOptimizedImage(file: File, folder: 'originals' | 'thumbnails' | 'temp' = 'originals', options?: {
+    quality?: number;
+    width?: number;
+    height?: number;
+    format?: 'webp' | 'jpeg' | 'png';
+  }): Promise<string> {
+    try {
+      // 이미지 최적화
+      const optimizedFile = await this.optimizeImage(file, options);
+      
+      // 최적화된 파일 업로드
+      return await this.uploadImage(optimizedFile, folder);
+    } catch (error) {
+      console.error('최적화된 업로드 실패:', error);
+      // 최적화 실패 시 원본 업로드
+      return await this.uploadImage(file, folder);
+    }
   },
 
   /**
@@ -168,6 +248,55 @@ export const storageService = {
       };
     } catch (error) {
       console.error('Complete upload error:', error);
+      
+      // Supabase 연결 확인
+      if (error instanceof Error && error.message.includes('fetch')) {
+        throw new Error('Supabase 서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.');
+      }
+      
+      throw error;
+    }
+  },
+
+  /**
+   * 완전한 최적화된 이미지 업로드 (압축 + WebP 변환)
+   */
+  async uploadOptimizedImageComplete(file: File, options?: {
+    quality?: number;
+    width?: number;
+    height?: number;
+    format?: 'webp' | 'jpeg' | 'png';
+  }): Promise<UploadResult> {
+    try {
+      // 파일 검증
+      const validation = this.validateImageFile(file);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
+      // 이미지 최적화
+      const optimizedFile = await this.optimizeImage(file, options);
+      
+      // 이미지 크기 정보 추출 (최적화된 파일 기준)
+      const dimensions = await this.getImageDimensions(optimizedFile);
+
+      // 최적화된 이미지 업로드
+      const originalPath = await this.uploadImage(optimizedFile, 'originals');
+      const originalUrl = this.getPublicUrl(originalPath);
+
+      // 썸네일 URL 생성 (Supabase Transform 사용)
+      const thumbnailUrl = this.getThumbnailUrl(originalPath);
+
+      return {
+        url: originalUrl,
+        thumbnailUrl,
+        fileName: optimizedFile.name,
+        fileSize: optimizedFile.size,
+        width: dimensions.width,
+        height: dimensions.height,
+      };
+    } catch (error) {
+      console.error('최적화된 업로드 실패:', error);
       
       // Supabase 연결 확인
       if (error instanceof Error && error.message.includes('fetch')) {
