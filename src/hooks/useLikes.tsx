@@ -2,20 +2,28 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { likeService } from '@/lib/database';
+import { userManager } from '@/lib/userManager';
 import { toast } from 'sonner';
 
 interface UseLikesOptions {
   userId?: string;
 }
 
-export function useLikes({ userId = '00000000-0000-0000-0000-000000000000' }: UseLikesOptions = {}) {
+export function useLikes({ userId }: UseLikesOptions = {}) {
   const [likedImages, setLikedImages] = useState<Set<string>>(new Set());
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 현재 사용자 ID 가져오기
+  const getCurrentUserId = useCallback(() => {
+    return userId || userManager.getUserId();
+  }, [userId]);
 
   // 로컬 스토리지에서 좋아요 상태 로드
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('likedImages');
+      const currentUserId = getCurrentUserId();
+      const saved = localStorage.getItem(`likedImages_${currentUserId}`);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -25,44 +33,85 @@ export function useLikes({ userId = '00000000-0000-0000-0000-000000000000' }: Us
         }
       }
     }
-  }, []);
+  }, [getCurrentUserId]);
 
   // 좋아요 상태 로컬 스토리지에 저장
-  const saveLikedImages = (newLikedImages: Set<string>) => {
+  const saveLikedImages = useCallback((newLikedImages: Set<string>) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('likedImages', JSON.stringify([...newLikedImages]));
+      const currentUserId = getCurrentUserId();
+      localStorage.setItem(`likedImages_${currentUserId}`, JSON.stringify([...newLikedImages]));
     }
-  };
+  }, [getCurrentUserId]);
 
   // 좋아요 토글
   const toggleLike = async (imageId: string): Promise<{ isLiked: boolean; newCount: number }> => {
+    if (isLoading) {
+      console.warn('좋아요 처리 중입니다. 잠시 후 다시 시도해주세요.');
+      return { isLiked: likedImages.has(imageId), newCount: likeCounts[imageId] || 0 };
+    }
+
+    setIsLoading(true);
+    
     try {
+      const currentUserId = getCurrentUserId();
       const isCurrentlyLiked = likedImages.has(imageId);
-      const result = await likeService.toggle(imageId, userId);
       
-      // 로컬 상태 업데이트
+      // 낙관적 업데이트
       const newLikedImages = new Set(likedImages);
-      if (result) {
-        newLikedImages.add(imageId);
-      } else {
-        newLikedImages.delete(imageId);
-      }
-      setLikedImages(newLikedImages);
-      saveLikedImages(newLikedImages);
-      
-      // 카운트 업데이트
       const currentCount = likeCounts[imageId] || 0;
-      const newCount = result ? currentCount + 1 : currentCount - 1;
+      const optimisticCount = isCurrentlyLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
+      
+      if (isCurrentlyLiked) {
+        newLikedImages.delete(imageId);
+      } else {
+        newLikedImages.add(imageId);
+      }
+      
+      setLikedImages(newLikedImages);
       setLikeCounts(prev => ({
         ...prev,
-        [imageId]: Math.max(0, newCount)
+        [imageId]: optimisticCount
       }));
       
-      return { isLiked: result, newCount: Math.max(0, newCount) };
+      // 서버에 요청
+      const result = await likeService.toggle(imageId, currentUserId);
+      
+      // 서버 응답에 따라 상태 조정
+      if (result !== !isCurrentlyLiked) {
+        // 서버 응답이 예상과 다르면 롤백
+        if (isCurrentlyLiked) {
+          newLikedImages.add(imageId);
+        } else {
+          newLikedImages.delete(imageId);
+        }
+        setLikedImages(newLikedImages);
+        setLikeCounts(prev => ({
+          ...prev,
+          [imageId]: currentCount
+        }));
+      }
+      
+      // 로컬 스토리지에 저장
+      saveLikedImages(newLikedImages);
+      
+      // 성공 메시지
+      toast.success(result ? '좋아요를 눌렀습니다!' : '좋아요를 취소했습니다');
+      
+      return { isLiked: result, newCount: optimisticCount };
     } catch (error) {
       console.error('좋아요 토글 실패:', error);
-      toast.error('좋아요 처리에 실패했습니다');
+      
+      // 에러 발생시 원래 상태로 롤백
+      const currentCount = likeCounts[imageId] || 0;
+      setLikeCounts(prev => ({
+        ...prev,
+        [imageId]: currentCount
+      }));
+      
+      toast.error('좋아요 처리에 실패했습니다. 다시 시도해주세요.');
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -123,6 +172,16 @@ export function useLikes({ userId = '00000000-0000-0000-0000-000000000000' }: Us
     }));
   }, []);
 
+  // 사용자 정보 가져오기
+  const getUserInfo = useCallback(() => {
+    return userManager.getUserInfo();
+  }, []);
+
+  // 사용자 통계 가져오기
+  const getUserStats = useCallback(() => {
+    return userManager.getStats();
+  }, []);
+
   return {
     toggleLike,
     getLikeCount,
@@ -131,6 +190,9 @@ export function useLikes({ userId = '00000000-0000-0000-0000-000000000000' }: Us
     setMultipleImageLikeCounts,
     isLiked,
     getLikedImageIds,
+    getUserInfo,
+    getUserStats,
+    isLoading,
     likedImages: [...likedImages]
   };
 }

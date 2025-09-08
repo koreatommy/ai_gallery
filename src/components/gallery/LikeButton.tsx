@@ -37,12 +37,17 @@ export default function LikeButton({
   const handleToggle = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
     
-    if (isAnimating) return;
+    if (isAnimating) {
+      console.warn('좋아요 처리 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
     
     setIsAnimating(true);
     
+    const originalIsLiked = isLiked;
+    const originalCount = count;
     const newIsLiked = !isLiked;
-    const newCount = newIsLiked ? count + 1 : count - 1;
+    const newCount = newIsLiked ? count + 1 : Math.max(0, count - 1);
     
     // 낙관적 업데이트
     setIsLiked(newIsLiked);
@@ -52,8 +57,9 @@ export default function LikeButton({
       await onToggle?.(imageId, newCount, newIsLiked);
     } catch (error) {
       // 에러 발생시 롤백
-      setIsLiked(isLiked);
-      setCount(count);
+      console.error('좋아요 토글 실패:', error);
+      setIsLiked(originalIsLiked);
+      setCount(originalCount);
     } finally {
       setTimeout(() => setIsAnimating(false), 300);
     }

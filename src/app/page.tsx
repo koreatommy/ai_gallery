@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { Search, Upload, Grid3X3, Heart, MessageCircle, Eye, Shield } from 'lucide-react';
+import { 
+  Search, Upload, Grid3X3, Heart, MessageCircle, Eye, Shield, Image, Images, 
+  GalleryVertical, Camera, ImageIcon, Home, Building, School, GraduationCap, BookOpen, 
+  Users, Star, Award, Trophy, Circle, Square, Triangle, Diamond, Hexagon 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -16,16 +20,49 @@ import HeroSection from '@/components/layout/HeroSection';
 import PopularRanking from '@/components/gallery/PopularRanking';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { categoryService } from '@/lib/database';
+import { useLogoSettings } from '@/hooks/useSiteSettings';
 import type { Category } from '@/types';
 import { toast } from 'sonner';
 
-export default function Home() {
+// 아이콘 매핑
+const iconMap = {
+  Grid3X3,
+  Image,
+  Images,
+  GalleryVertical,
+  Camera,
+  ImageIcon,
+  Home,
+  Building,
+  School,
+  GraduationCap,
+  BookOpen,
+  Users,
+  Heart,
+  Star,
+  Award,
+  Trophy,
+  Circle,
+  Square,
+  Triangle,
+  Diamond,
+  Hexagon,
+};
+
+// 동적 아이콘 렌더링 함수
+const renderLogoIcon = (iconName: string) => {
+  const IconComponent = iconMap[iconName as keyof typeof iconMap] || Grid3X3;
+  return <IconComponent className="w-5 h-5 text-white" />;
+};
+
+export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { logoText, logoIcon } = useLogoSettings();
 
   // 카테고리 로드
   useEffect(() => {
@@ -70,10 +107,10 @@ export default function Home() {
             {/* 로고 */}
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Grid3X3 className="w-5 h-5 text-white" />
+                {renderLogoIcon(logoIcon)}
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                하남교육재단
+                {logoText}
               </h1>
             </div>
 

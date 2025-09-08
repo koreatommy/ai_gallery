@@ -8,9 +8,12 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { imageService, categoryService } from '@/lib/database';
 import { storageService } from '@/lib/storage';
+import DashboardStats from './DashboardStats';
+import ActivityLog from './ActivityLog';
+import SystemStatus from './SystemStatus';
 import type { Image, Category } from '@/types';
 
-interface DashboardStats {
+interface DashboardData {
   totalImages: number;
   totalCategories: number;
   totalLikes: number;
@@ -21,7 +24,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
@@ -131,13 +134,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">관리자 대시보드</h1>
-          <p className="text-gray-600 mt-1">AI Gallery 시스템 현황을 한눈에 확인하세요</p>
-        </div>
-        
+      {/* 시간 범위 선택 */}
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-2">
           {(['7d', '30d', '90d'] as const).map((range) => (
             <Button
@@ -153,62 +151,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">총 이미지</p>
-              <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalImages)}</p>
-              <p className="text-xs text-green-600 mt-1">
-                +{stats.recentUploads.length} 최근 업로드
-              </p>
-            </div>
-            <div className="relative">
-              <ImageIcon className="h-8 w-8 text-blue-500" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">카테고리</p>
-              <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalCategories)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {stats.popularCategories[0]?.category.name} 인기
-              </p>
-            </div>
-            <Database className="h-8 w-8 text-green-500" />
-          </div>
-        </Card>
-
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">총 좋아요</p>
-              <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalLikes)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                평균 {(stats.totalLikes / Math.max(stats.totalImages, 1)).toFixed(1)}개/이미지
-              </p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-red-500" />
-          </div>
-        </Card>
-
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">총 댓글</p>
-              <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalComments)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                평균 {(stats.totalComments / Math.max(stats.totalImages, 1)).toFixed(1)}개/이미지
-              </p>
-            </div>
-            <Users className="h-8 w-8 text-purple-500" />
-          </div>
-        </Card>
-      </div>
+      <DashboardStats selectedTimeRange={selectedTimeRange} />
 
       {/* 빠른 액션 버튼 */}
       <div className="flex flex-wrap gap-4">
@@ -228,12 +171,12 @@ export default function AdminDashboard() {
           카테고리 관리
         </Button>
         <Button
-          onClick={() => window.location.href = '/'}
-          variant="ghost"
+          onClick={() => window.location.href = '/admin/analytics'}
+          variant="outline"
           className="flex items-center gap-2"
         >
-          <Eye className="h-4 w-4" />
-          갤러리 보기
+          <BarChart3 className="h-4 w-4" />
+          분석 보기
         </Button>
         <Button
           onClick={loadDashboardData}
@@ -245,7 +188,7 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* 최근 업로드 */}
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -299,32 +242,40 @@ export default function AdminDashboard() {
           </div>
         </Card>
 
-        {/* 인기 이미지 */}
-        <Card className="p-6 lg:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-gray-600" />
-            <h2 className="text-lg font-semibold">인기 이미지</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {stats.topImages.slice(0, 6).map((image) => (
-              <div key={image.id} className="group relative">
-                <img
-                  src={image.thumbnail_url}
-                  alt={image.title}
-                  className="w-full aspect-square rounded-lg object-cover group-hover:opacity-80 transition-opacity"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                  <div className="text-white text-center">
-                    <p className="font-medium">{image.title}</p>
-                    <p className="text-sm">{image.likes_count} 좋아요</p>
-                  </div>
+        {/* 활동 로그 */}
+        <div className="lg:col-span-1">
+          <ActivityLog />
+        </div>
+      </div>
+
+      {/* 시스템 상태 */}
+      <SystemStatus />
+
+      {/* 인기 이미지 */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="h-5 w-5 text-gray-600" />
+          <h2 className="text-lg font-semibold">인기 이미지</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {stats.topImages.slice(0, 6).map((image) => (
+            <div key={image.id} className="group relative">
+              <img
+                src={image.thumbnail_url}
+                alt={image.title}
+                className="w-full aspect-square rounded-lg object-cover group-hover:opacity-80 transition-opacity"
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                <div className="text-white text-center p-2">
+                  <p className="font-medium text-sm">{image.title}</p>
+                  <p className="text-xs">{image.likes_count} 좋아요</p>
                 </div>
               </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

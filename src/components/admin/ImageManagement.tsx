@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Trash2, Edit3, Eye, MoreHorizontal, Tag } from 'lucide-react';
+import { Search, Filter, Trash2, Edit3, Eye, MoreHorizontal, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 
 export default function ImageManagement() {
   const [images, setImages] = useState<Image[]>([]);
+  const [allImages, setAllImages] = useState<Image[]>([]); // 전체 이미지 저장
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +28,11 @@ export default function ImageManagement() {
   const [categoryChangeDialog, setCategoryChangeDialog] = useState<{ open: boolean; imageId?: string; currentCategoryId?: string }>({ open: false });
   const [sortBy, setSortBy] = useState<'date' | 'likes' | 'name' | 'size'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // 페이징 관련 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     loadImages();
@@ -39,6 +45,13 @@ export default function ImageManagement() {
       handleSearch();
     }
   }, [selectedCategory]);
+
+  // 검색어, 정렬, 페이지 변경 시 필터링 및 페이징 적용
+  useEffect(() => {
+    if (allImages.length > 0) {
+      applyFiltersAndPagination(allImages);
+    }
+  }, [searchQuery, selectedCategory, sortBy, sortOrder, currentPage, allImages]);
 
   const loadCategories = async () => {
     try {
@@ -53,8 +66,10 @@ export default function ImageManagement() {
   const loadImages = async () => {
     setIsLoading(true);
     try {
-      const data = await imageService.getAll(50, 0);
-      setImages(data);
+      // 모든 이미지를 가져와서 allImages에 저장
+      const data = await imageService.getAll(1000, 0); // 충분히 큰 수로 설정
+      setAllImages(data);
+      applyFiltersAndPagination(data);
     } catch (error) {
       console.error('이미지 로드 실패:', error);
       toast.error('이미지 목록을 불러올 수 없습니다');
@@ -63,43 +78,73 @@ export default function ImageManagement() {
     }
   };
 
-  const handleSearch = async () => {
-    setIsLoading(true);
-    try {
-      let data: Image[];
+  // 필터링과 페이징을 적용하는 함수
+  const applyFiltersAndPagination = (imageData: Image[]) => {
+    // 필터링 적용
+    const filteredImages = imageData.filter(image => {
+      // 검색어 필터링
+      const matchesSearch = !searchQuery.trim() || 
+        image.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      if (searchQuery.trim() && selectedCategory && selectedCategory !== 'all') {
-        // 검색어와 카테고리 모두 있는 경우
-        if (selectedCategory === 'none') {
-          const searchResults = await imageService.search(searchQuery.trim());
-          data = searchResults.filter(img => !img.category_id);
-        } else {
-          const searchResults = await imageService.search(searchQuery.trim());
-          data = searchResults.filter(img => img.category_id === selectedCategory);
-        }
-      } else if (searchQuery.trim()) {
-        // 검색어만 있는 경우
-        data = await imageService.search(searchQuery.trim());
-      } else if (selectedCategory && selectedCategory !== 'all') {
-        // 카테고리만 있는 경우
-        if (selectedCategory === 'none') {
-          const allImages = await imageService.getAll(50, 0);
-          data = allImages.filter(img => !img.category_id);
-        } else {
-          data = await imageService.getByCategory(selectedCategory, 50, 0);
-        }
-      } else {
-        // 둘 다 없는 경우 전체 로드
-        data = await imageService.getAll(50, 0);
+      // 카테고리 필터링
+      let matchesCategory = true;
+      if (selectedCategory === 'none') {
+        matchesCategory = !image.category_id;
+      } else if (selectedCategory !== 'all') {
+        matchesCategory = image.category_id === selectedCategory;
       }
       
-      setImages(data);
-    } catch (error) {
-      console.error('검색 실패:', error);
-      toast.error('검색에 실패했습니다');
-    } finally {
-      setIsLoading(false);
-    }
+      return matchesSearch && matchesCategory;
+    });
+
+    // 정렬 적용
+    const sortedImages = filteredImages.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortBy) {
+        case 'date':
+          aValue = new Date(a.created_at).getTime();
+          bValue = new Date(b.created_at).getTime();
+          break;
+        case 'likes':
+          aValue = a.likes_count;
+          bValue = b.likes_count;
+          break;
+        case 'name':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'size':
+          aValue = a.file_size;
+          bValue = b.file_size;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    // 페이징 적용
+    const totalPagesCount = Math.ceil(sortedImages.length / itemsPerPage);
+    setTotalPages(totalPagesCount);
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedImages = sortedImages.slice(startIndex, endIndex);
+    
+    setImages(paginatedImages);
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1); // 검색 시 첫 페이지로 이동
+    applyFiltersAndPagination(allImages);
   };
 
   const handleSelectImage = (imageId: string) => {
@@ -169,7 +214,62 @@ export default function ImageManagement() {
   const handleClearFilters = () => {
     setSearchQuery('');
     setSelectedCategory('all');
-    loadImages();
+    setCurrentPage(1);
+    applyFiltersAndPagination(allImages);
+  };
+
+  // 페이징 관련 함수들
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // 페이징 버튼 생성
+  const generatePageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // 총 페이지가 5개 이하면 모두 표시
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // 현재 페이지를 중심으로 앞뒤 2개씩 표시
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, currentPage + 2);
+      
+      if (start > 1) {
+        pages.push(1);
+        if (start > 2) {
+          pages.push('...');
+        }
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          pages.push('...');
+        }
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
   };
 
   const formatDate = (dateString: string) => {
@@ -194,64 +294,11 @@ export default function ImageManagement() {
     return category ? category.name : '알 수 없는 카테고리';
   };
 
-  const filteredAndSortedImages = images
-    .filter(image => {
-      // 검색어 필터링 (이미 API에서 처리되었지만 추가 필터링)
-      const matchesSearch = !searchQuery.trim() || 
-        image.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        image.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        image.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      // 카테고리 필터링 (이미 API에서 처리되었지만 추가 필터링)
-      let matchesCategory = true;
-      if (selectedCategory === 'none') {
-        matchesCategory = !image.category_id;
-      } else if (selectedCategory !== 'all') {
-        matchesCategory = image.category_id === selectedCategory;
-      }
-      
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      let aValue: any, bValue: any;
-      
-      switch (sortBy) {
-        case 'date':
-          aValue = new Date(a.created_at).getTime();
-          bValue = new Date(b.created_at).getTime();
-          break;
-        case 'likes':
-          aValue = a.likes_count;
-          bValue = b.likes_count;
-          break;
-        case 'name':
-          aValue = a.title.toLowerCase();
-          bValue = b.title.toLowerCase();
-          break;
-        case 'size':
-          aValue = a.file_size;
-          bValue = b.file_size;
-          break;
-        default:
-          return 0;
-      }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
+  // 이미지가 20개 이하인 경우 페이징 숨기기
+  const showPagination = allImages.length > itemsPerPage;
 
   return (
     <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">이미지 관리</h1>
-          <p className="text-gray-600">업로드된 이미지들을 관리하고 편집할 수 있습니다</p>
-        </div>
-      </div>
 
       {/* 검색 및 필터 */}
       <Card className="p-4">
@@ -364,7 +411,7 @@ export default function ImageManagement() {
             </Card>
           ))}
         </div>
-      ) : filteredAndSortedImages.length === 0 ? (
+      ) : images.length === 0 ? (
         <Card className="p-12 text-center">
           <div className="text-gray-400 mb-4">
             <Search className="h-16 w-16 mx-auto" />
@@ -388,7 +435,7 @@ export default function ImageManagement() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedImages.map((image) => (
+          {images.map((image) => (
             <Card key={image.id} className="overflow-hidden">
               {/* 이미지 */}
               <div className="relative aspect-video">
@@ -513,6 +560,63 @@ export default function ImageManagement() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* 페이징 컴포넌트 */}
+      {showPagination && totalPages > 1 && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              총 {allImages.length}개 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, allImages.length)}개 표시
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* 이전 페이지 버튼 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                이전
+              </Button>
+              
+              {/* 페이지 번호 버튼들 */}
+              <div className="flex items-center gap-1">
+                {generatePageNumbers().map((page, index) => (
+                  <div key={index}>
+                    {page === '...' ? (
+                      <span className="px-2 py-1 text-gray-500">...</span>
+                    ) : (
+                      <Button
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page as number)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {/* 다음 페이지 버튼 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1"
+              >
+                다음
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
       )}
 
       {/* 개별 삭제 확인 다이얼로그 */}

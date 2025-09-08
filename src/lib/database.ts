@@ -215,43 +215,105 @@ export const imageService = {
 
 // 좋아요 관련 함수들
 export const likeService = {
-  async toggle(imageId: string, userId: string = '00000000-0000-0000-0000-000000000000'): Promise<boolean> {
-    // 기존 좋아요 확인
-    const { data: existing } = await supabase
-      .from('likes')
-      .select('id')
-      .eq('image_id', imageId)
-      .eq('user_id', userId)
-      .single();
-
-    if (existing) {
-      // 좋아요 제거
-      const { error } = await supabase
-        .from('likes')
-        .delete()
-        .eq('id', existing.id);
-      
-      if (error) throw error;
+  async toggle(imageId: string, userId?: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 좋아요 기능을 사용할 수 없습니다.');
       return false;
-    } else {
-      // 좋아요 추가
-      const { error } = await supabase
+    }
+
+    // userId가 없으면 임시 ID 사용 (서버 사이드용)
+    const finalUserId = userId || 'temp-user-' + Date.now();
+
+    try {
+      // 기존 좋아요 확인
+      const { data: existing, error: selectError } = await supabase
         .from('likes')
-        .insert({ image_id: imageId, user_id: userId });
-      
-      if (error) throw error;
-      return true;
+        .select('id')
+        .eq('image_id', imageId)
+        .eq('user_id', finalUserId)
+        .maybeSingle();
+
+      if (selectError) {
+        console.error('좋아요 조회 실패:', selectError);
+        throw selectError;
+      }
+
+      if (existing) {
+        // 좋아요 제거
+        const { error: deleteError } = await supabase
+          .from('likes')
+          .delete()
+          .eq('id', existing.id);
+        
+        if (deleteError) {
+          console.error('좋아요 삭제 실패:', deleteError);
+          throw deleteError;
+        }
+        return false;
+      } else {
+        // 좋아요 추가
+        const { error: insertError } = await supabase
+          .from('likes')
+          .insert({ image_id: imageId, user_id: finalUserId });
+        
+        if (insertError) {
+          console.error('좋아요 추가 실패:', insertError);
+          throw insertError;
+        }
+        return true;
+      }
+    } catch (error) {
+      console.error('좋아요 토글 실패:', error);
+      throw error;
     }
   },
 
   async getCount(imageId: string): Promise<number> {
-    const { count, error } = await supabase
-      .from('likes')
-      .select('*', { count: 'exact', head: true })
-      .eq('image_id', imageId);
-    
-    if (error) throw error;
-    return count || 0;
+    if (!isSupabaseConfigured()) {
+      return 0;
+    }
+
+    try {
+      const { count, error } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('image_id', imageId);
+      
+      if (error) {
+        console.error('좋아요 카운트 조회 실패:', error);
+        throw error;
+      }
+      return count || 0;
+    } catch (error) {
+      console.error('좋아요 카운트 조회 실패:', error);
+      return 0;
+    }
+  },
+
+  async isLiked(imageId: string, userId?: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      return false;
+    }
+
+    const finalUserId = userId || 'temp-user-' + Date.now();
+
+    try {
+      const { data, error } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('image_id', imageId)
+        .eq('user_id', finalUserId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('좋아요 상태 조회 실패:', error);
+        return false;
+      }
+      return !!data;
+    } catch (error) {
+      console.error('좋아요 상태 조회 실패:', error);
+      return false;
+    }
   }
 };
 
@@ -286,5 +348,113 @@ export const commentService = {
       .eq('id', id);
     
     if (error) throw error;
+  }
+};
+
+// 사이트 설정 관련 함수들
+export const siteSettingsService = {
+  async get(key: string): Promise<string | null> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 기본값을 반환합니다.');
+      return key === 'logo_text' ? '하남교육재단' : null;
+    }
+
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', key)
+      .single();
+    
+    if (error) {
+      console.error('사이트 설정 조회 실패:', error);
+      return key === 'logo_text' ? '하남교육재단' : null;
+    }
+    
+    return data?.value || null;
+  },
+
+  async set(key: string, value: string, description?: string): Promise<void> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 설정을 저장할 수 없습니다.');
+      return;
+    }
+
+    try {
+      console.log('사이트 설정 저장 시도:', { key, value, description });
+      
+      // 먼저 기존 레코드가 있는지 확인
+      const { data: existing, error: selectError } = await supabase
+        .from('site_settings')
+        .select('id')
+        .eq('key', key)
+        .maybeSingle(); // single() 대신 maybeSingle() 사용
+
+      if (selectError) {
+        console.error('사이트 설정 조회 실패:', selectError);
+        throw selectError;
+      }
+
+      console.log('기존 레코드 확인:', existing);
+
+      if (existing) {
+        // 기존 레코드 업데이트
+        console.log('기존 레코드 업데이트 시도');
+        const { error: updateError } = await supabase
+          .from('site_settings')
+          .update({ 
+            value, 
+            description,
+            updated_at: new Date().toISOString()
+          })
+          .eq('key', key);
+        
+        if (updateError) {
+          console.error('사이트 설정 업데이트 실패:', updateError);
+          throw updateError;
+        }
+        console.log('사이트 설정 업데이트 성공');
+      } else {
+        // 새 레코드 삽입
+        console.log('새 레코드 삽입 시도');
+        const { error: insertError } = await supabase
+          .from('site_settings')
+          .insert({ 
+            key, 
+            value, 
+            description
+          });
+        
+        if (insertError) {
+          console.error('사이트 설정 삽입 실패:', insertError);
+          throw insertError;
+        }
+        console.log('사이트 설정 삽입 성공');
+      }
+    } catch (error) {
+      console.error('사이트 설정 저장 실패:', error);
+      throw error;
+    }
+  },
+
+  async getAll(): Promise<{ [key: string]: string }> {
+    if (!isSupabaseConfigured()) {
+      return { logo_text: '하남교육재단' };
+    }
+
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('key, value');
+    
+    if (error) {
+      console.error('사이트 설정 전체 조회 실패:', error);
+      return { logo_text: '하남교육재단' };
+    }
+    
+    const settings: { [key: string]: string } = {};
+    data?.forEach(item => {
+      settings[item.key] = item.value;
+    });
+    
+    return settings;
   }
 };

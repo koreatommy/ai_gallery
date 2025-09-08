@@ -73,9 +73,11 @@ export default function InfiniteScrollGallery({
 
   const handleLikeToggle = async (imageId: string) => {
     try {
-      // 익명 사용자용 고정 UUID 사용
-      const anonymousUserId = '00000000-0000-0000-0000-000000000000';
-      const isLiked = await likeService.toggle(imageId, anonymousUserId);
+      // userManager를 사용하여 현재 사용자 ID 가져오기
+      const { userManager } = await import('@/lib/userManager');
+      const currentUserId = userManager.getUserId();
+      
+      const isLiked = await likeService.toggle(imageId, currentUserId);
       
       // 선택된 이미지 카운트 업데이트 (라이트박스에서만 필요)
       if (selectedImage && selectedImage.id === imageId) {
@@ -85,10 +87,10 @@ export default function InfiniteScrollGallery({
         });
       }
       
-      toast.success(isLiked ? '좋아요를 눌렀습니다' : '좋아요를 취소했습니다');
+      // 성공 메시지는 likeService에서 처리됨
     } catch (error) {
       console.error('좋아요 처리 실패:', error);
-      toast.error('좋아요 처리에 실패했습니다');
+      // 에러 메시지는 likeService에서 처리됨
     }
   };
 

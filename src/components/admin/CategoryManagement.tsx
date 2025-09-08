@@ -134,29 +134,23 @@ export default function CategoryManagement() {
 
   return (
     <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">카테고리 관리</h1>
-          <p className="text-gray-600">이미지 카테고리를 관리하고 편집할 수 있습니다</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={loadCategories}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            새로고침
-          </Button>
-          <Button
-            onClick={() => setCreateDialog(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            새 카테고리
-          </Button>
-        </div>
+      {/* 액션 버튼 */}
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={loadCategories}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          새로고침
+        </Button>
+        <Button
+          onClick={() => setCreateDialog(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          새 카테고리
+        </Button>
       </div>
 
       {/* 통계 정보 */}
