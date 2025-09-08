@@ -98,6 +98,29 @@ export const imageService = {
     return count || 0;
   },
 
+  async getCategoryImageCounts(): Promise<{ [categoryId: string]: number }> {
+    if (!isSupabaseConfigured()) {
+      return {};
+    }
+    
+    const { data, error } = await supabase
+      .from('image_stats')
+      .select('category_id')
+      .not('category_id', 'is', null);
+    
+    if (error) throw error;
+    
+    // 카테고리별 개수 계산
+    const counts: { [categoryId: string]: number } = {};
+    data?.forEach(item => {
+      if (item.category_id) {
+        counts[item.category_id] = (counts[item.category_id] || 0) + 1;
+      }
+    });
+    
+    return counts;
+  },
+
   async getById(id: string): Promise<Image | null> {
     const { data, error } = await supabase
       .from('image_stats')

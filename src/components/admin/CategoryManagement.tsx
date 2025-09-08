@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit3, Trash2, MoreHorizontal, Tag, Search } from 'lucide-react';
+import { Plus, Edit3, Trash2, MoreHorizontal, Tag, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -38,16 +38,16 @@ export default function CategoryManagement() {
   const loadCategories = async () => {
     setIsLoading(true);
     try {
-      const [categoriesData, imagesData] = await Promise.all([
+      const [categoriesData, imageCounts] = await Promise.all([
         categoryService.getAll(),
-        imageService.getAll(1000, 0) // 모든 이미지를 가져와서 카테고리별 개수 계산
+        imageService.getCategoryImageCounts() // 카테고리별 이미지 개수만 가져오기
       ]);
 
-      // 각 카테고리별 이미지 개수 계산
-      const categoryStats = categoriesData.map(category => {
-        const imageCount = imagesData.filter(img => img.category_id === category.id).length;
-        return { ...category, imageCount };
-      });
+      // 각 카테고리별 이미지 개수 매핑
+      const categoryStats = categoriesData.map(category => ({
+        ...category,
+        imageCount: imageCounts[category.id] || 0
+      }));
 
       setCategories(categoryStats);
     } catch (error) {
@@ -140,14 +140,69 @@ export default function CategoryManagement() {
           <h1 className="text-2xl font-bold text-gray-900">카테고리 관리</h1>
           <p className="text-gray-600">이미지 카테고리를 관리하고 편집할 수 있습니다</p>
         </div>
-        <Button
-          onClick={() => setCreateDialog(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          새 카테고리
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={loadCategories}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            새로고침
+          </Button>
+          <Button
+            onClick={() => setCreateDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            새 카테고리
+          </Button>
+        </div>
       </div>
+
+      {/* 통계 정보 */}
+      {!isLoading && categories.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Tag className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">총 카테고리</p>
+                <p className="text-2xl font-bold text-gray-900">{categories.length}</p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Tag className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">활성 카테고리</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {categories.filter(c => c.imageCount > 0).length}
+                </p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Tag className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">총 이미지</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {categories.reduce((sum, c) => sum + c.imageCount, 0)}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* 검색 */}
       <Card className="p-4">
@@ -197,9 +252,23 @@ export default function CategoryManagement() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">{category.name}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {category.imageCount}개 이미지
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={category.imageCount > 0 ? "default" : "secondary"} 
+                        className={`text-xs ${
+                          category.imageCount > 0 
+                            ? "bg-blue-100 text-blue-800" 
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {category.imageCount}개 이미지
+                      </Badge>
+                      {category.imageCount === 0 && (
+                        <Badge variant="outline" className="text-xs text-gray-500">
+                          비어있음
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
 
