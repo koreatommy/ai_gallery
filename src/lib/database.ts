@@ -436,7 +436,7 @@ export const siteSettingsService = {
   async get(key: string): Promise<string | null> {
     if (!isSupabaseConfigured()) {
       console.warn('Supabase가 설정되지 않았습니다. 기본값을 반환합니다.');
-      return key === 'logo_text' ? 'AI Gallery' : null;
+      return null;
     }
 
     const { data, error } = await supabase
@@ -447,7 +447,7 @@ export const siteSettingsService = {
     
     if (error) {
       console.error('사이트 설정 조회 실패:', error);
-      return key === 'logo_text' ? 'AI Gallery' : null;
+      return null;
     }
     
     return data?.value || null;
@@ -518,7 +518,7 @@ export const siteSettingsService = {
 
   async getAll(): Promise<{ [key: string]: string }> {
     if (!isSupabaseConfigured()) {
-      return { logo_text: 'AI Gallery' };
+      return {};
     }
 
     const { data, error } = await supabase
@@ -527,7 +527,7 @@ export const siteSettingsService = {
     
     if (error) {
       console.error('사이트 설정 전체 조회 실패:', error);
-      return { logo_text: 'AI Gallery' };
+      return {};
     }
     
     const settings: { [key: string]: string } = {};

@@ -21,7 +21,7 @@ export function useSiteSettings() {
       console.error('사이트 설정 로드 실패:', err);
       setError('사이트 설정을 불러오는데 실패했습니다.');
       // 기본값 설정
-      setSettings({ logo_text: 'AI Gallery' });
+      setSettings({});
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +51,7 @@ export function useLogoText() {
   const { getSetting, isLoading, error } = useSiteSettings();
   
   return {
-    logoText: getSetting('logo_text', 'AI Gallery'),
+    logoText: getSetting('logo_text', ''),
     isLoading,
     error
   };
@@ -77,7 +77,7 @@ export function useLogoSettings() {
   const { getSetting, isLoading, error } = useSiteSettings();
   
   return {
-    logoText: getSetting('logo_text', 'AI Gallery'),
+    logoText: getSetting('logo_text', ''),
     logoIcon: getSetting('logo_icon', 'Grid3X3'),
     isLoading,
     error
