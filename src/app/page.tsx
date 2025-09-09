@@ -65,7 +65,7 @@ export default function HomePage() {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { logoText, logoIcon } = useLogoSettings();
+  const { logoText, logoIcon, isLoading: logoLoading } = useLogoSettings();
 
   // 카테고리 로드
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function HomePage() {
                 {renderLogoIcon(logoIcon)}
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {logoText}
+                {logoLoading ? 'AI Gallery' : logoText}
               </h1>
             </div>
 

@@ -55,12 +55,12 @@ export default function LogoManagementPage() {
         siteSettingsService.get('logo_text'),
         siteSettingsService.get('logo_icon')
       ]);
-      setLogoText(text || '하남교육재단');
+      setLogoText(text || 'AI Gallery');
       setLogoIcon(icon || 'Grid3X3');
     } catch (error) {
       console.error('로고 설정 로드 실패:', error);
       toast.error('로고 설정을 불러오는데 실패했습니다.');
-      setLogoText('하남교육재단');
+      setLogoText('AI Gallery');
       setLogoIcon('Grid3X3');
     } finally {
       setIsLoading(false);
@@ -125,7 +125,7 @@ export default function LogoManagementPage() {
                 maxLength={50}
               />
               <p className="text-sm text-gray-500">
-                현재 텍스트: <span className="font-medium">{logoText || '하남교육재단'}</span>
+                현재 텍스트: <span className="font-medium">{logoText || 'AI Gallery'}</span>
               </p>
             </div>
 
@@ -195,7 +195,7 @@ export default function LogoManagementPage() {
                   })()}
                 </div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {logoText || '하남교육재단'}
+                  {logoText || 'AI Gallery'}
                 </h1>
               </div>
             </div>
