@@ -113,12 +113,18 @@ export default function InfiniteScrollGallery({
   return (
     <div>
       {/* 페이징 정보 표시 */}
-      {!searchQuery && !categoryId && totalCount > 0 && (
+      {totalCount > 0 && (
         <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="text-sm text-gray-600">
                 <span className="font-medium text-gray-900">{totalCount.toLocaleString()}</span>개의 작품
+                {searchQuery && (
+                  <span className="ml-2 text-blue-600">(검색: "{searchQuery}")</span>
+                )}
+                {categoryId && (
+                  <span className="ml-2 text-purple-600">(카테고리 필터)</span>
+                )}
               </div>
               <div className="text-sm text-gray-500">
                 페이지 {currentPage} / {totalPages}
@@ -134,6 +140,42 @@ export default function InfiniteScrollGallery({
         </div>
       )}
 
+      {/* 검색 결과가 없을 때 */}
+      {!isLoading && images.length === 0 && totalCount === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-4">
+            {searchQuery ? (
+              <>
+                <p className="text-lg font-medium text-gray-600 mb-2">
+                  "{searchQuery}"에 대한 검색 결과가 없습니다
+                </p>
+                <p className="text-sm text-gray-500">
+                  다른 키워드로 검색해보세요
+                </p>
+              </>
+            ) : categoryId ? (
+              <>
+                <p className="text-lg font-medium text-gray-600 mb-2">
+                  이 카테고리에 등록된 이미지가 없습니다
+                </p>
+                <p className="text-sm text-gray-500">
+                  다른 카테고리를 선택해보세요
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-medium text-gray-600 mb-2">
+                  등록된 이미지가 없습니다
+                </p>
+                <p className="text-sm text-gray-500">
+                  첫 번째 이미지를 업로드해보세요
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <MasonryGallery
         images={images}
         loading={isLoading && images.length === 0}
@@ -142,7 +184,7 @@ export default function InfiniteScrollGallery({
       />
 
       {/* 페이징 UI */}
-      {!searchQuery && !categoryId && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 py-8">
           {/* 이전 페이지 버튼 */}
           <Button

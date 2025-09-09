@@ -111,6 +111,12 @@ export class ShareUtils {
   }
 
   private static openPopup(url: string, width = 600, height = 400): void {
+    // 모바일에서는 새 탭으로 열기
+    if (window.innerWidth <= 768) {
+      window.open(url, '_blank');
+      return;
+    }
+    
     const left = (screen.width - width) / 2;
     const top = (screen.height - height) / 2;
     

@@ -50,14 +50,19 @@ export function usePagination({
   const baseQueryKey = ['images', searchQuery, categoryId];
   const offset = (currentPage - 1) * limit;
 
-  // 총 개수 쿼리 (필터가 없을 때만)
+  // 총 개수 쿼리
   const { data: totalCountData } = useQuery({
     queryKey: [...baseQueryKey, 'count'],
     queryFn: async () => {
-      if (searchQuery || categoryId) return 0; // 검색이나 카테고리 필터가 있으면 총 개수 계산 안함
-      return await imageService.getTotalCount();
+      if (searchQuery && searchQuery.trim()) {
+        return await imageService.getSearchCount(searchQuery.trim());
+      } else if (categoryId && categoryId.trim()) {
+        return await imageService.getCategoryCount(categoryId);
+      } else {
+        return await imageService.getTotalCount();
+      }
     },
-    enabled: enabled && !searchQuery && !categoryId,
+    enabled: enabled,
     staleTime: 5 * 60 * 1000, // 5분
   });
 

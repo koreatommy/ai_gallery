@@ -62,12 +62,22 @@ export default function ShareButton({
 
   const handleFacebookShare = () => {
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-    window.open(facebookUrl, '_blank', 'width=600,height=400');
+    // 모바일에서는 새 탭으로 열고, 데스크톱에서는 팝업으로 열기
+    if (window.innerWidth <= 768) {
+      window.open(facebookUrl, '_blank');
+    } else {
+      window.open(facebookUrl, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes');
+    }
   };
 
   const handleTwitterShare = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}`;
-    window.open(twitterUrl, '_blank', 'width=600,height=400');
+    // 모바일에서는 새 탭으로 열고, 데스크톱에서는 팝업으로 열기
+    if (window.innerWidth <= 768) {
+      window.open(twitterUrl, '_blank');
+    } else {
+      window.open(twitterUrl, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes');
+    }
   };
 
   const sizeClasses = {

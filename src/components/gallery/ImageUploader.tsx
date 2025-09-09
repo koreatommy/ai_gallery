@@ -206,9 +206,9 @@ export default function ImageUploader({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       {/* 이미지 정보 및 카테고리 설정 */}
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-blue-600" />
@@ -216,7 +216,7 @@ export default function ImageUploader({
           </div>
           
           {/* 제목과 작성자 입력 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title-input">제목 <span className="text-red-500">*</span></Label>
               <Input
@@ -285,7 +285,7 @@ export default function ImageUploader({
       </Card>
 
       {/* 이미지 최적화 설정 */}
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -364,18 +364,18 @@ export default function ImageUploader({
       <Card
         {...getRootProps()}
         className={`
-          border-2 border-dashed p-8 text-center cursor-pointer transition-colors
+          border-2 border-dashed p-4 sm:p-8 text-center cursor-pointer transition-colors max-h-64 sm:max-h-80
           ${isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'}
         `}
       >
         <input {...getInputProps()} />
-        <div className="flex flex-col items-center gap-4">
-          <Upload className={`h-12 w-12 ${isDragActive ? 'text-primary' : 'text-gray-400'}`} />
+        <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 h-full min-h-[200px] sm:min-h-[240px]">
+          <Upload className={`h-8 w-8 sm:h-12 sm:w-12 ${isDragActive ? 'text-primary' : 'text-gray-400'}`} />
           <div>
-            <p className="text-lg font-medium">
+            <p className="text-base sm:text-lg font-medium">
               {isDragActive ? '이미지를 드롭하세요' : '이미지를 드래그하거나 클릭하여 선택'}
             </p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               JPG, PNG, WebP, GIF 지원 (최대 {maxFiles}개, 각각 50MB 이하)
             </p>
           </div>
@@ -385,18 +385,18 @@ export default function ImageUploader({
       {/* 선택된 이미지 미리보기 */}
       {files.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">선택된 이미지 ({files.length}개)</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h3 className="text-base sm:text-lg font-medium">선택된 이미지 ({files.length}개)</h3>
             <div className="flex flex-col items-end space-y-2">
               <Button
                 onClick={uploadImages}
                 disabled={uploading}
-                className="min-w-24"
+                className="min-w-24 w-full sm:w-auto"
               >
                 {uploading ? `업로드 중... (${currentFileIndex}/${files.length})` : '업로드'}
               </Button>
               {uploading && (
-                <div className="w-32">
+                <div className="w-full sm:w-32">
                   <div className="bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -411,7 +411,7 @@ export default function ImageUploader({
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {files.map((fileObj) => (
               <div key={fileObj.id} className="relative">
                 <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">

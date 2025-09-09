@@ -138,7 +138,7 @@ export default function HomePage() {
                     업로드
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>이미지 업로드</DialogTitle>
                   </DialogHeader>

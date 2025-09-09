@@ -144,6 +144,20 @@ export const imageService = {
     return data || [];
   },
 
+  async getCategoryCount(categoryId: string): Promise<number> {
+    if (!isSupabaseConfigured()) {
+      return 0;
+    }
+    
+    const { count, error } = await supabase
+      .from('image_stats')
+      .select('*', { count: 'exact', head: true })
+      .eq('category_id', categoryId);
+    
+    if (error) throw error;
+    return count || 0;
+  },
+
   async search(query: string, limit = 20, offset = 0): Promise<Image[]> {
     const { data, error } = await supabase
       .from('image_stats')
@@ -154,6 +168,20 @@ export const imageService = {
     
     if (error) throw error;
     return data || [];
+  },
+
+  async getSearchCount(query: string): Promise<number> {
+    if (!isSupabaseConfigured()) {
+      return 0;
+    }
+    
+    const { count, error } = await supabase
+      .from('image_stats')
+      .select('*', { count: 'exact', head: true })
+      .or(`title.ilike.%${query}%,author.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`);
+    
+    if (error) throw error;
+    return count || 0;
   },
 
   async getTopLiked(limit = 3): Promise<Image[]> {
