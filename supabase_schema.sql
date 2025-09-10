@@ -202,4 +202,6 @@ INSERT INTO footer_links (section_id, title, url, target, order_index) VALUES
 INSERT INTO site_settings (key, value, description) VALUES
   ('footer_copyright', '© 2024 AI Gallery. All rights reserved.', '풋터 저작권 텍스트'),
   ('footer_show_social', 'true', '소셜 미디어 링크 표시 여부'),
-  ('footer_show_newsletter', 'true', '뉴스레터 구독 표시 여부');
+  ('footer_show_newsletter', 'true', '뉴스레터 구독 표시 여부'),
+  ('logo_text', 'AI Gallery', '사이트 로고 텍스트'),
+  ('logo_icon', 'Grid3X3', '사이트 로고 아이콘');

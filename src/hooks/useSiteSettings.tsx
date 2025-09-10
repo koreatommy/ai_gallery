@@ -77,7 +77,7 @@ export function useLogoSettings() {
   const { getSetting, isLoading, error } = useSiteSettings();
   
   return {
-    logoText: getSetting('logo_text', ''),
+    logoText: isLoading ? '' : getSetting('logo_text', 'AI Gallery'),
     logoIcon: getSetting('logo_icon', 'Grid3X3'),
     isLoading,
     error

@@ -123,7 +123,7 @@ export default function HomePage() {
                 {renderLogoIcon(logoIcon)}
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {logoText || '로고 텍스트'}
+                {logoText}
               </h1>
             </div>
 
