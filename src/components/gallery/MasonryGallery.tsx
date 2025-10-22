@@ -133,7 +133,7 @@ export default function MasonryGallery({
                     <Skeleton className="w-full aspect-[4/3]" />
                   )}
                   <img
-                    src={isMobile ? getMobileThumbnailUrl(image.url, 400) : image.thumbnail_url}
+                    src={image.url}
                     alt={image.title}
                     className={`
                       w-full object-cover transition-all duration-300

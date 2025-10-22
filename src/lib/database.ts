@@ -185,15 +185,96 @@ export const imageService = {
   },
 
   async getTopLiked(limit = 3): Promise<Image[]> {
-    const { data, error } = await supabase
-      .from('image_stats')
-      .select('*')
-      .order('likes_count', { ascending: false })
-      .order('created_at', { ascending: false }) // 좋아요 수가 같으면 최신순
-      .limit(limit);
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase가 설정되지 않았습니다. 빈 이미지 목록을 반환합니다.');
+      return [];
+    }
     
-    if (error) throw error;
-    return data || [];
+    try {
+      console.log('인기 이미지 조회 시작...');
+      
+      // 먼저 image_stats 뷰에서 조회 시도
+      let { data, error } = await supabase
+        .from('image_stats')
+        .select('*')
+        .order('likes_count', { ascending: false })
+        .order('created_at', { ascending: false }) // 좋아요 수가 같으면 최신순
+        .limit(limit);
+      
+      // image_stats 뷰가 없는 경우 images 테이블에서 직접 조회
+      if (error && (error.code === 'PGRST116' || error.message?.includes('relation "image_stats" does not exist'))) {
+        console.warn('image_stats 뷰가 없습니다. images 테이블에서 직접 조회합니다.');
+        
+        const { data: imagesData, error: imagesError } = await supabase
+          .from('images')
+          .select(`
+            *,
+            categories(name)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(limit);
+        
+        if (imagesError) {
+          console.error('images 테이블 조회 실패:', imagesError);
+          throw imagesError;
+        }
+        
+        // 좋아요 수를 포함한 데이터로 변환
+        const imagesWithStats = await Promise.all(
+          (imagesData || []).map(async (image) => {
+            const likesCount = await likeService.getCount(image.id);
+            return {
+              ...image,
+              likes_count: likesCount,
+              comments_count: 0, // 기본값
+              category_name: image.categories?.name || null
+            };
+          })
+        );
+        
+        // 좋아요 수로 정렬
+        imagesWithStats.sort((a, b) => b.likes_count - a.likes_count);
+        
+        console.log('images 테이블에서 조회 성공:', imagesWithStats.length, '개');
+        return imagesWithStats.slice(0, limit);
+      }
+      
+      if (error) {
+        console.error('인기 이미지 조회 실패:', error);
+        console.error('에러 코드:', error.code);
+        console.error('에러 메시지:', error.message);
+        console.error('에러 세부사항:', error.details);
+        console.error('에러 힌트:', error.hint);
+        
+        // 네트워크 에러인 경우 빈 배열 반환
+        if (error.message?.includes('fetch failed') || error.message?.includes('network')) {
+          console.warn('네트워크 연결 문제로 인해 빈 배열을 반환합니다.');
+          return [];
+        }
+        
+        throw error;
+      }
+      
+      console.log('인기 이미지 조회 성공:', data?.length || 0, '개');
+      return data || [];
+    } catch (error) {
+      console.error('getTopLiked 에러:', error);
+      console.error('에러 타입:', typeof error);
+      console.error('에러 메시지:', error instanceof Error ? error.message : '알 수 없는 에러');
+      
+      // 네트워크 에러나 연결 실패인 경우 빈 배열 반환
+      if (error instanceof Error && (
+        error.message.includes('fetch failed') || 
+        error.message.includes('network') ||
+        error.message.includes('ECONNREFUSED') ||
+        error.message.includes('ENOTFOUND')
+      )) {
+        console.warn('네트워크 연결 문제로 인해 빈 배열을 반환합니다.');
+        return [];
+      }
+      
+      throw error;
+    }
   },
 
   async create(imageData: {

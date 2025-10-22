@@ -26,7 +26,28 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
         setTopImages(data);
       } catch (error) {
         console.error('인기 이미지 로드 실패:', error);
-        toast.error('인기 이미지를 불러올 수 없습니다');
+        console.error('에러 타입:', typeof error);
+        console.error('에러 메시지:', error instanceof Error ? error.message : '알 수 없는 에러');
+        console.error('에러 스택:', error instanceof Error ? error.stack : '스택 없음');
+        
+        // 네트워크 에러인지 확인
+        const isNetworkError = error instanceof Error && (
+          error.message.includes('fetch failed') || 
+          error.message.includes('network') ||
+          error.message.includes('ECONNREFUSED') ||
+          error.message.includes('ENOTFOUND')
+        );
+        
+        // Supabase 연결 상태 확인
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('dummy')) {
+          console.error('Supabase 환경 변수가 설정되지 않았습니다.');
+          toast.error('데이터베이스 연결 설정이 필요합니다');
+        } else if (isNetworkError) {
+          console.error('네트워크 연결 문제가 발생했습니다.');
+          toast.error('네트워크 연결을 확인해주세요');
+        } else {
+          toast.error('인기 이미지를 불러올 수 없습니다');
+        }
       } finally {
         setLoading(false);
       }
@@ -144,6 +165,28 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
                   src={isMobile ? getMobileThumbnailUrl(image.url, 400) : (image.thumbnail_url || image.url)}
                   alt={image.title}
                   className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110 group-hover:brightness-110"
+                  onError={(e) => {
+                    // 이미지 로딩 실패 시 여러 fallback 시도
+                    const target = e.target as HTMLImageElement;
+                    const currentSrc = target.src;
+                    
+                    // 1차: 원본 URL로 시도
+                    if (currentSrc !== image.url) {
+                      target.src = image.url;
+                      return;
+                    }
+                    
+                    // 2차: 썸네일 URL로 시도
+                    if (image.thumbnail_url && currentSrc !== image.thumbnail_url) {
+                      target.src = image.thumbnail_url;
+                      return;
+                    }
+                    
+                    // 3차: 기본 플레이스홀더 이미지로 설정
+                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMDAgMTUwQzE3Ni45IDE1MCAxNTggMTY4LjkgMTU4IDE5MkMxNTggMjE1LjEgMTc2LjkgMjM0IDIwMCAyMzRDMjIzLjEgMjM0IDI0MiAyMTUuMSAyNDIgMTkyQzI0MiAxNjguOSAyMjMuMSAxNTAgMjAwIDE1MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE2MCAyODBIMjQwVjMwMEgxNjBWMjgwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+                    target.alt = '이미지를 불러올 수 없습니다';
+                  }}
+                  loading="lazy"
                 />
                 
                 {/* 호버 오버레이 효과 */}

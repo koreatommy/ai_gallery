@@ -19,10 +19,15 @@ if (!isValidSupabaseConfig()) {
   console.error('필요한 환경 변수:');
   console.error('- NEXT_PUBLIC_SUPABASE_URL: https://your-project-id.supabase.co');
   console.error('- NEXT_PUBLIC_SUPABASE_ANON_KEY: your-anon-key');
+  console.error('현재 설정된 값:');
+  console.error(`- NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl || 'undefined'}`);
+  console.error(`- NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'undefined'}`);
   
   if (process.env.NODE_ENV === 'production') {
     console.error('프로덕션 환경에서는 올바른 Supabase 설정이 필요합니다.');
   }
+} else {
+  console.log('✅ Supabase 환경 변수가 올바르게 설정되었습니다.');
 }
 
 // Supabase 클라이언트 생성
@@ -32,6 +37,12 @@ export const supabase = isValidSupabaseConfig()
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      global: {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
       }
     })
   : createClient('https://dummy.supabase.co', 'dummy-key');
