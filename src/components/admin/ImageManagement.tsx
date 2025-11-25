@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { imageService, categoryService } from '@/lib/database';
 import { storageService } from '@/lib/storage';
 import { useImageOptimization } from '@/hooks/useImageOptimization';
@@ -27,6 +28,8 @@ export default function ImageManagement() {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; imageId?: string }>({ open: false });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
   const [categoryChangeDialog, setCategoryChangeDialog] = useState<{ open: boolean; imageId?: string; currentCategoryId?: string }>({ open: false });
+  const [editDialog, setEditDialog] = useState<{ open: boolean; image?: Image }>({ open: false });
+  const [editTitle, setEditTitle] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'likes' | 'name' | 'size'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
@@ -207,11 +210,56 @@ export default function ImageManagement() {
           : img
       ));
       
+      // allImages도 업데이트
+      setAllImages(prev => prev.map(img => 
+        img.id === imageId 
+          ? { ...img, category_id: newCategoryId }
+          : img
+      ));
+      
       setCategoryChangeDialog({ open: false });
       toast.success('카테고리가 변경되었습니다');
     } catch (error) {
       console.error('카테고리 변경 실패:', error);
       toast.error('카테고리 변경에 실패했습니다');
+    }
+  };
+
+  const handleEditClick = (image: Image) => {
+    setEditTitle(image.title);
+    setEditDialog({ open: true, image });
+  };
+
+  const handleTitleUpdate = async () => {
+    if (!editDialog.image) return;
+    
+    if (!editTitle.trim()) {
+      toast.error('제목을 입력해주세요');
+      return;
+    }
+
+    try {
+      await imageService.update(editDialog.image.id, { title: editTitle.trim() });
+      
+      // 로컬 상태 업데이트
+      setImages(prev => prev.map(img => 
+        img.id === editDialog.image!.id 
+          ? { ...img, title: editTitle.trim() }
+          : img
+      ));
+      
+      // allImages도 업데이트
+      setAllImages(prev => prev.map(img => 
+        img.id === editDialog.image!.id 
+          ? { ...img, title: editTitle.trim() }
+          : img
+      ));
+      
+      setEditDialog({ open: false });
+      toast.success('제목이 수정되었습니다');
+    } catch (error) {
+      console.error('제목 수정 실패:', error);
+      toast.error('제목 수정에 실패했습니다');
     }
   };
 
@@ -477,10 +525,7 @@ export default function ImageManagement() {
                         보기
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => {
-                          // TODO: 이미지 편집 모달 구현
-                          toast.info('이미지 편집 기능은 개발 중입니다');
-                        }}
+                        onClick={() => handleEditClick(image)}
                       >
                         <Edit3 className="h-4 w-4 mr-2" />
                         편집
@@ -661,6 +706,50 @@ export default function ImageManagement() {
             </Button>
             <Button variant="destructive" onClick={handleBulkDelete}>
               {selectedImages.size}개 삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 이미지 제목 편집 다이얼로그 */}
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>이미지 제목 수정</DialogTitle>
+          </DialogHeader>
+          {editDialog.image && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">제목</Label>
+                <Input
+                  id="edit-title"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="이미지 제목을 입력하세요"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleTitleUpdate();
+                    }
+                  }}
+                />
+              </div>
+              {editDialog.image.url && (
+                <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
+                  <img
+                    src={getAdminThumbnailUrl(editDialog.image.url, 600, 400)}
+                    alt={editDialog.image.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false })}>
+              취소
+            </Button>
+            <Button onClick={handleTitleUpdate}>
+              저장
             </Button>
           </DialogFooter>
         </DialogContent>

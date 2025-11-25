@@ -225,7 +225,7 @@ export default function HomePage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">갤러리보기</h2>
-                <p className="text-gray-600">다양한 작품들을 둘러보고 마음에 드는 작품을 발견해보세요</p>
+                <p className="text-gray-600">다양한 사진을 둘러보고 마음에 드는 사진을 발견해보세요</p>
               </div>
             </div>
           </div>

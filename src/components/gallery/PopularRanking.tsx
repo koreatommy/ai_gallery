@@ -144,8 +144,8 @@ export default function PopularRanking({ onImageClick }: PopularRankingProps) {
           <Trophy className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">인기 작품 랭킹</h2>
-          <p className="text-gray-600">가장 많은 사랑을 받은 작품들을 만나보세요</p>
+          <h2 className="text-2xl font-bold text-gray-900">인기 사진 랭킹</h2>
+          <p className="text-gray-600">가장 많은 사랑을 받은 사진을 만나보세요</p>
         </div>
       </div>
 
