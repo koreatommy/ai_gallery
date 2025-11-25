@@ -74,7 +74,7 @@ export default function HeroSection({ onUploadClick }: HeroSectionProps) {
           {/* 메인 타이틀 */}
           <h1 className={`text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="bg-gradient-to-r from-yellow-200 via-pink-200 to-blue-200 bg-clip-text text-transparent animate-pulse">
-              포토 어워드 갤러리
+              교육현장 사진
             </span>
           </h1>
 
@@ -108,7 +108,7 @@ export default function HeroSection({ onUploadClick }: HeroSectionProps) {
               className="bg-white/20 border-2 border-white/60 text-white hover:bg-white hover:text-gray-900 px-6 py-4 rounded-full text-base font-semibold backdrop-blur-sm transition-all duration-300 transform hover:scale-105 shadow-lg"
               onClick={onUploadClick || scrollToGallery}
             >
-              작품 업로드하기
+              사진업로드
             </Button>
           </div>
         </div>
