@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import Confetti from 'react-confetti';
 import { 
   Search, Upload, Grid3X3, Heart, MessageCircle, Eye, Shield, Image, Images, 
   GalleryVertical, Camera, ImageIcon, Home, Building, School, GraduationCap, BookOpen, 
@@ -22,7 +23,7 @@ import ImageLightbox from '@/components/gallery/ImageLightbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { categoryService } from '@/lib/database';
 import { useLogoSettings } from '@/hooks/useSiteSettings';
-import type { Category, Image } from '@/types';
+import type { Category, Image as ImageType } from '@/types';
 import { toast } from 'sonner';
 
 // 아이콘 매핑
@@ -61,11 +62,44 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const queryClient = useQueryClient();
   const router = useRouter();
   const { logoText, logoIcon, isLoading: logoLoading } = useLogoSettings();
+
+  // 윈도우 크기 설정
+  useEffect(() => {
+    const updateWindowSize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    updateWindowSize();
+    window.addEventListener('resize', updateWindowSize);
+    return () => window.removeEventListener('resize', updateWindowSize);
+  }, []);
+
+  // 페이지 로드 시 폭죽 효과
+  useEffect(() => {
+    // 첫 방문 시에만 폭죽 효과 표시
+    const hasVisited = sessionStorage.getItem('hasVisited');
+    if (!hasVisited) {
+      setShowConfetti(true);
+      sessionStorage.setItem('hasVisited', 'true');
+      
+      // 5초 후 폭죽 효과 제거
+      const timer = setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // 카테고리 로드
   useEffect(() => {
@@ -101,7 +135,7 @@ export default function HomePage() {
     router.push('/admin');
   };
 
-  const handleImageClick = (image: Image) => {
+  const handleImageClick = (image: ImageType) => {
     setSelectedImage(image);
     setIsLightboxOpen(true);
   };
@@ -113,6 +147,26 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* 폭죽 효과 */}
+      {showConfetti && windowSize.width > 0 && (
+        <Confetti
+          width={windowSize.width}
+          height={windowSize.height}
+          recycle={false}
+          numberOfPieces={200}
+          gravity={0.3}
+          colors={['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#EF4444', '#6366F1']}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 9999,
+          }}
+        />
+      )}
       {/* 헤더 */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

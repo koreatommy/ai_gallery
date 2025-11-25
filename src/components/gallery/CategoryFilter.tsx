@@ -39,7 +39,7 @@ export default function CategoryFilter({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="flex items-center space-x-2 min-w-[200px] justify-between"
+            className="flex items-center space-x-2 min-w-[400px] w-full max-w-lg justify-between"
           >
             <div className="flex items-center space-x-2">
               <Grid3X3 className="w-4 h-4" />
@@ -50,7 +50,7 @@ export default function CategoryFilter({
             <ChevronDown className="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
+        <DropdownMenuContent className="w-[400px]">
           <DropdownMenuItem onClick={handleClearFilter}>
             <div className="flex items-center space-x-2 w-full">
               <Grid3X3 className="w-4 h-4" />
@@ -92,34 +92,6 @@ export default function CategoryFilter({
           </div>
         </Card>
       )}
-
-      {/* 카테고리 칩들 (모바일용) */}
-      <div className="hidden sm:flex items-center space-x-2 overflow-x-auto">
-        <Button
-          variant={selectedCategory === '' ? 'default' : 'outline'}
-          size="sm"
-          onClick={handleClearFilter}
-          className="whitespace-nowrap"
-        >
-          전체
-        </Button>
-        {categories.slice(0, 5).map((category) => (
-          <Button
-            key={category.id}
-            variant={selectedCategory === category.id ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCategorySelect(category.id)}
-            className="whitespace-nowrap"
-          >
-            {category.name}
-          </Button>
-        ))}
-        {categories.length > 5 && (
-          <Badge variant="outline" className="text-xs">
-            +{categories.length - 5}
-          </Badge>
-        )}
-      </div>
     </div>
   );
 }
