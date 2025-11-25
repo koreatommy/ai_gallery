@@ -30,6 +30,7 @@ export default function ImageManagement() {
   const [categoryChangeDialog, setCategoryChangeDialog] = useState<{ open: boolean; imageId?: string; currentCategoryId?: string }>({ open: false });
   const [editDialog, setEditDialog] = useState<{ open: boolean; image?: Image }>({ open: false });
   const [editTitle, setEditTitle] = useState('');
+  const [editAuthor, setEditAuthor] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'likes' | 'name' | 'size'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
@@ -227,10 +228,11 @@ export default function ImageManagement() {
 
   const handleEditClick = (image: Image) => {
     setEditTitle(image.title);
+    setEditAuthor(image.author || '');
     setEditDialog({ open: true, image });
   };
 
-  const handleTitleUpdate = async () => {
+  const handleImageUpdate = async () => {
     if (!editDialog.image) return;
     
     if (!editTitle.trim()) {
@@ -238,28 +240,36 @@ export default function ImageManagement() {
       return;
     }
 
+    if (!editAuthor.trim()) {
+      toast.error('작성자를 입력해주세요');
+      return;
+    }
+
     try {
-      await imageService.update(editDialog.image.id, { title: editTitle.trim() });
+      await imageService.update(editDialog.image.id, { 
+        title: editTitle.trim(),
+        author: editAuthor.trim()
+      });
       
       // 로컬 상태 업데이트
       setImages(prev => prev.map(img => 
         img.id === editDialog.image!.id 
-          ? { ...img, title: editTitle.trim() }
+          ? { ...img, title: editTitle.trim(), author: editAuthor.trim() }
           : img
       ));
       
       // allImages도 업데이트
       setAllImages(prev => prev.map(img => 
         img.id === editDialog.image!.id 
-          ? { ...img, title: editTitle.trim() }
+          ? { ...img, title: editTitle.trim(), author: editAuthor.trim() }
           : img
       ));
       
       setEditDialog({ open: false });
-      toast.success('제목이 수정되었습니다');
+      toast.success('이미지 정보가 수정되었습니다');
     } catch (error) {
-      console.error('제목 수정 실패:', error);
-      toast.error('제목 수정에 실패했습니다');
+      console.error('이미지 정보 수정 실패:', error);
+      toast.error('이미지 정보 수정에 실패했습니다');
     }
   };
 
@@ -325,15 +335,21 @@ export default function ImageManagement() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    if (!dateString) return '날짜 없음';
+    try {
+      return new Date(dateString).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return '날짜 없음';
+    }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+  const formatFileSize = (bytes: number | undefined | null) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    if (isNaN(bytes)) return '크기 없음';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -593,6 +609,16 @@ export default function ImageManagement() {
                   </div>
                 )}
 
+                {/* 작성자 정보 */}
+                {image.author && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <span className="font-medium">작성자:</span>
+                      <span>{image.author}</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* 메타 정보 */}
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>{formatDate(image.created_at)}</span>
@@ -600,10 +626,12 @@ export default function ImageManagement() {
                 </div>
                 
                 <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
-                  {image.width && image.height && (
+                  {image.width && image.height && !isNaN(image.width) && !isNaN(image.height) ? (
                     <span>{image.width} × {image.height}</span>
+                  ) : (
+                    <span></span>
                   )}
-                  <span>{image.likes_count} 좋아요</span>
+                  <span>{image.likes_count || 0} 좋아요</span>
                 </div>
               </div>
             </Card>
@@ -711,16 +739,16 @@ export default function ImageManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* 이미지 제목 편집 다이얼로그 */}
+      {/* 이미지 정보 편집 다이얼로그 */}
       <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ open })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>이미지 제목 수정</DialogTitle>
+            <DialogTitle>이미지 정보 수정</DialogTitle>
           </DialogHeader>
           {editDialog.image && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-title">제목</Label>
+                <Label htmlFor="edit-title">제목 <span className="text-red-500">*</span></Label>
                 <Input
                   id="edit-title"
                   value={editTitle}
@@ -728,7 +756,21 @@ export default function ImageManagement() {
                   placeholder="이미지 제목을 입력하세요"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
-                      handleTitleUpdate();
+                      handleImageUpdate();
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-author">작성자 <span className="text-red-500">*</span></Label>
+                <Input
+                  id="edit-author"
+                  value={editAuthor}
+                  onChange={(e) => setEditAuthor(e.target.value)}
+                  placeholder="작성자명을 입력하세요"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleImageUpdate();
                     }
                   }}
                 />
@@ -748,7 +790,7 @@ export default function ImageManagement() {
             <Button variant="outline" onClick={() => setEditDialog({ open: false })}>
               취소
             </Button>
-            <Button onClick={handleTitleUpdate}>
+            <Button onClick={handleImageUpdate}>
               저장
             </Button>
           </DialogFooter>

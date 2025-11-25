@@ -50,14 +50,20 @@ CREATE VIEW image_stats AS
 SELECT 
   i.id,
   i.title,
+  i.author,
   i.description,
   i.url,
   i.thumbnail_url,
+  i.file_name,
+  i.file_size,
+  i.width,
+  i.height,
   i.category_id,
   c.name as category_name,
   i.tags,
   i.created_at,
   i.updated_at,
+  i.user_id,
   COALESCE(l.likes_count, 0) as likes_count,
   COALESCE(cm.comments_count, 0) as comments_count
 FROM images i
