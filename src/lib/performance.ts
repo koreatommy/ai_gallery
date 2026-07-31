@@ -1,5 +1,7 @@
 // 이미지 최적화 및 성능 관련 유틸리티
 
+import { calculateContainSize } from './imageResize';
+
 // MemoryInfo 타입 정의 (브라우저 API)
 interface MemoryInfo {
   usedJSHeapSize: number;
@@ -9,9 +11,18 @@ interface MemoryInfo {
 
 export interface ImageOptimizationOptions {
   quality?: number;
+  /** 최대 너비 (contain 박스) */
   width?: number;
+  /** 최대 높이 (contain 박스) */
   height?: number;
+  /** 긴 변 최대 픽셀 — 지정 시 width/height보다 우선 */
+  maxEdge?: number;
   format?: 'webp' | 'jpeg' | 'png';
+  /**
+   * contain: 비율 유지하며 최대 박스 안에 맞춤 (기본)
+   * cover: 비율 유지 크롭
+   */
+  fit?: 'contain' | 'cover';
 }
 
 export class PerformanceService {
@@ -92,71 +103,122 @@ export class PerformanceService {
     });
   }
 
-  // 이미지 압축 (Canvas 사용)
-  static compressImage(file: File, options: ImageOptimizationOptions = {}): Promise<Blob> {
-    const { quality = 0.8, width, height, format = 'jpeg' } = options;
+  /**
+   * EXIF Orientation을 반영해 이미지 디코딩
+   */
+  private static async decodeImage(file: File): Promise<{
+    source: CanvasImageSource;
+    width: number;
+    height: number;
+    cleanup: () => void;
+  }> {
+    if (typeof createImageBitmap === 'function') {
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        return {
+          source: bitmap,
+          width: bitmap.width,
+          height: bitmap.height,
+          cleanup: () => bitmap.close(),
+        };
+      } catch {
+        // fall through to HTMLImageElement
+      }
+    }
 
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          reject(new Error('Canvas context not available'));
-          return;
-        }
-
-        // 크기 계산
-        let { width: imgWidth, height: imgHeight } = img;
-        
-        if (width || height) {
-          const aspectRatio = imgWidth / imgHeight;
-          
-          if (width && height) {
-            imgWidth = width;
-            imgHeight = height;
-          } else if (width) {
-            imgWidth = width;
-            imgHeight = width / aspectRatio;
-          } else if (height) {
-            imgHeight = height;
-            imgWidth = height * aspectRatio;
-          }
-        }
-
-        canvas.width = imgWidth;
-        canvas.height = imgHeight;
-
-        // 이미지 그리기
-        ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
-
-        // Blob으로 변환
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              reject(new Error('Failed to compress image'));
-            }
-          },
-          `image/${format}`,
-          quality
-        );
-      };
-
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Failed to load image'));
+      el.src = objectUrl;
     });
+
+    return {
+      source: img,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      cleanup: () => URL.revokeObjectURL(objectUrl),
+    };
   }
 
-  // 썸네일 생성
+  // 이미지 압축 (비율 유지 — stretch 경로 없음)
+  static async compressImage(file: File, options: ImageOptimizationOptions = {}): Promise<Blob> {
+    const {
+      quality = 0.8,
+      width,
+      height,
+      maxEdge,
+      format = 'jpeg',
+      fit = 'contain',
+    } = options;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas context not available');
+    }
+
+    const decoded = await this.decodeImage(file);
+
+    try {
+      const imgWidth = decoded.width;
+      const imgHeight = decoded.height;
+      let targetWidth = imgWidth;
+      let targetHeight = imgHeight;
+      let sx = 0;
+      let sy = 0;
+      let sw = imgWidth;
+      let sh = imgHeight;
+
+      const maxW = maxEdge ?? width;
+      const maxH = maxEdge ?? height;
+
+      if (fit === 'cover' && width && height) {
+        const scale = Math.max(width / imgWidth, height / imgHeight);
+        sw = Math.round(width / scale);
+        sh = Math.round(height / scale);
+        sx = Math.round((imgWidth - sw) / 2);
+        sy = Math.round((imgHeight - sh) / 2);
+        targetWidth = width;
+        targetHeight = height;
+      } else if (maxW || maxH) {
+        const sized = calculateContainSize(imgWidth, imgHeight, maxW, maxH);
+        targetWidth = sized.width;
+        targetHeight = sized.height;
+      }
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      ctx.drawImage(decoded.source, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+
+      const mimeType = format === 'png' ? 'image/png' : format === 'webp' ? 'image/webp' : 'image/jpeg';
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (result) => {
+            if (result) resolve(result);
+            else reject(new Error('Failed to compress image'));
+          },
+          mimeType,
+          quality
+        );
+      });
+
+      return blob;
+    } finally {
+      decoded.cleanup();
+    }
+  }
+
+  // 썸네일 생성 (정사각 크롭, 비율 유지)
   static generateThumbnail(file: File, size = 300): Promise<Blob> {
     return this.compressImage(file, {
       width: size,
       height: size,
       quality: 0.8,
-      format: 'jpeg'
+      format: 'jpeg',
+      fit: 'cover',
     });
   }
 

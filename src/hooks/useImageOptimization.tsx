@@ -141,24 +141,23 @@ export function useImageOptimization(options: UseImageOptimizationOptions = {}) 
     return url.toString();
   }, [state.isSupportsWebP]);
 
-  // 모바일용 고해상도 썸네일 URL 생성
+  // 모바일용 고해상도 썸네일 URL — width만 지정해 비율 유지
   const getMobileThumbnailUrl = useCallback((
     originalUrl: string,
-    size = 400
+    size = 800
   ): string => {
     if (!originalUrl) return '';
 
     try {
-      // Supabase Transform API 사용하여 모바일 최적화
       const url = new URL(originalUrl);
       
-      // Supabase Storage URL인지 확인
       if (url.hostname.includes('supabase.co') && url.pathname.includes('/storage/')) {
         const params = new URLSearchParams();
         params.set('width', size.toString());
-        params.set('height', size.toString());
+        // height 미지정 → 세로/가로 비율 유지
         if (state.isSupportsWebP) params.set('format', 'webp');
-        params.set('quality', '85'); // 모바일용 적절한 품질
+        params.set('quality', '85');
+        params.set('resize', 'contain');
 
         if (params.toString()) {
           url.search = params.toString();
@@ -168,7 +167,7 @@ export function useImageOptimization(options: UseImageOptimizationOptions = {}) 
       return url.toString();
     } catch (error) {
       console.warn('이미지 URL 생성 실패:', error);
-      return originalUrl; // 실패 시 원본 URL 반환
+      return originalUrl;
     }
   }, [state.isSupportsWebP]);
 

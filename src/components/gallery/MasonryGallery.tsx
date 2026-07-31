@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import LikeButton from './LikeButton';
 import ShareButton from './ShareButton';
 import { useLikes } from '@/hooks/useLikes';
-import { useImageOptimization } from '@/hooks/useImageOptimization';
+import { getAspectRatioStyle, isPortrait } from '@/lib/imageOrientation';
 import type { Image } from '@/types';
 
 interface MasonryGalleryProps {
@@ -34,19 +34,24 @@ export default function MasonryGallery({
   onLikeToggle
 }: MasonryGalleryProps) {
   const [imageLoadStates, setImageLoadStates] = useState<Record<string, boolean>>({});
-  const { toggleLike, isLiked, setMultipleImageLikeCounts } = useLikes();
-  const { getMobileThumbnailUrl } = useImageOptimization();
-  const [isMobile, setIsMobile] = useState(false);
+  const [naturalSizes, setNaturalSizes] = useState<Record<string, { width: number; height: number }>>({});
+  const { isLiked, setMultipleImageLikeCounts } = useLikes();
 
-  const handleImageLoad = (imageId: string) => {
+  const handleImageLoad = (imageId: string, e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
     setImageLoadStates(prev => ({ ...prev, [imageId]: true }));
+    if (img.naturalWidth && img.naturalHeight) {
+      setNaturalSizes(prev => ({
+        ...prev,
+        [imageId]: { width: img.naturalWidth, height: img.naturalHeight },
+      }));
+    }
   };
 
   const handleImageClick = (image: Image) => {
     onImageClick?.(image);
   };
 
-  // 이미지 좋아요 카운트 초기화
   useEffect(() => {
     if (images.length > 0) {
       const likeCounts: Record<string, number> = {};
@@ -57,21 +62,9 @@ export default function MasonryGallery({
     }
   }, [images, setMultipleImageLikeCounts]);
 
-  const handleLikeToggle = async (imageId: string, newCount: number, isLiked: boolean) => {
+  const handleLikeToggle = async (imageId: string, _newCount?: number, _isLiked?: boolean) => {
     onLikeToggle?.(imageId);
   };
-
-  // 모바일 감지
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   if (loading) {
     return (
@@ -82,7 +75,7 @@ export default function MasonryGallery({
       >
         {Array.from({ length: 12 }).map((_, index) => (
           <div key={index} className="mb-4">
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden py-0 gap-0">
               <Skeleton className="w-full h-64" />
               <div className="p-4 space-y-2">
                 <Skeleton className="h-4 w-3/4" />
@@ -114,120 +107,124 @@ export default function MasonryGallery({
         className="masonry-grid"
         columnClassName="masonry-grid-column"
       >
-        {images.map((image, index) => (
-          <motion.div
-            key={image.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.1 }}
-            className="mb-4"
-          >
-            <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer">
-              <div
-                className="relative overflow-hidden"
-                onClick={() => handleImageClick(image)}
-              >
-                {/* 이미지 */}
-                <div className="relative">
-                  {!imageLoadStates[image.id] && (
-                    <Skeleton className="w-full aspect-[4/3]" />
-                  )}
-                  <img
-                    src={image.url}
-                    alt={image.title}
-                    className={`
-                      w-full object-cover transition-all duration-300
-                      group-hover:scale-105
-                      ${imageLoadStates[image.id] ? 'opacity-100' : 'opacity-0'}
-                    `}
-                    onLoad={() => handleImageLoad(image.id)}
-                    loading="lazy"
-                  />
-                </div>
+        {images.map((image, index) => {
+          const measured = naturalSizes[image.id];
+          const w = measured?.width || image.width;
+          const h = measured?.height || image.height;
+          const aspect = getAspectRatioStyle(w, h);
+          const portrait = isPortrait(w, h);
 
-                {/* 호버 오버레이 */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <div className="flex items-center space-x-4 text-white">
-                    <LikeButton
-                      imageId={image.id}
-                      initialCount={image.likes_count}
-                      initialLiked={isLiked(image.id)}
-                      onToggle={handleLikeToggle}
-                      size="md"
-                      variant="ghost"
+          return (
+            <motion.div
+              key={image.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: index * 0.05 }}
+              className="mb-4"
+            >
+              <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer py-0 gap-0">
+                <div
+                  className="relative overflow-hidden bg-muted/20"
+                  onClick={() => handleImageClick(image)}
+                >
+                  <div className="relative">
+                    {!imageLoadStates[image.id] && (
+                      <Skeleton
+                        className="w-full"
+                        style={{ aspectRatio: aspect || (portrait ? '3 / 4' : '4 / 3') }}
+                      />
+                    )}
+                    <img
+                      src={image.url}
+                      alt={image.title}
+                      className={`
+                        block w-full h-auto transition-opacity duration-300
+                        ${imageLoadStates[image.id] ? 'opacity-100' : 'opacity-0 absolute inset-0'}
+                      `}
+                      onLoad={(e) => handleImageLoad(image.id, e)}
+                      loading="lazy"
                     />
-                    <div className="flex items-center space-x-1">
-                      <MessageCircle className="h-5 w-5" />
-                      <span>{image.comments_count || 0}</span>
+                  </div>
+
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="flex items-center space-x-4 text-white">
+                      <LikeButton
+                        imageId={image.id}
+                        initialCount={image.likes_count}
+                        initialLiked={isLiked(image.id)}
+                        onToggle={handleLikeToggle}
+                        size="md"
+                        variant="ghost"
+                      />
+                      <div className="flex items-center space-x-1">
+                        <MessageCircle className="h-5 w-5" />
+                        <span>{image.comments_count || 0}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* 이미지 정보 */}
-              <div className="p-4">
-                <h3 className="font-medium text-lg mb-1 line-clamp-2">
-                  {image.title}
-                </h3>
-                
-                
-                {image.description && !image.description.includes('업로드된 이미지:') && (
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                    {image.description}
-                  </p>
-                )}
+                <div className="p-4">
+                  <h3 className="font-medium text-lg mb-1 line-clamp-2">
+                    {image.title}
+                  </h3>
 
-                {/* 태그 */}
-                {image.tags && image.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {image.tags.slice(0, 3).map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {image.tags.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{image.tags.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
+                  {image.description && !image.description.includes('업로드된 이미지:') && (
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                      {image.description}
+                    </p>
+                  )}
 
-                {/* 액션 버튼 */}
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-500 flex items-center space-x-2">
-                    {image.author && (
-                      <>
-                        <span>{image.author}</span>
-                        <span>•</span>
-                      </>
-                    )}
-                    <span>{new Date(image.created_at).toLocaleDateString('ko-KR')}</span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <LikeButton
-                      imageId={image.id}
-                      initialCount={image.likes_count}
-                      initialLiked={isLiked(image.id)}
-                      onToggle={handleLikeToggle}
-                      size="sm"
-                      variant="ghost"
-                    />
-                    
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <ShareButton 
-                        image={image}
+                  {image.tags && image.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {image.tags.slice(0, 3).map((tag, tagIndex) => (
+                        <Badge key={tagIndex} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {image.tags.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{image.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-500 flex items-center space-x-2">
+                      {image.author && (
+                        <>
+                          <span>{image.author}</span>
+                          <span>•</span>
+                        </>
+                      )}
+                      <span>{new Date(image.created_at).toLocaleDateString('ko-KR')}</span>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <LikeButton
+                        imageId={image.id}
+                        initialCount={image.likes_count}
+                        initialLiked={isLiked(image.id)}
+                        onToggle={handleLikeToggle}
                         size="sm"
                         variant="ghost"
                       />
+
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ShareButton
+                          image={image}
+                          size="sm"
+                          variant="ghost"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          </motion.div>
-        ))}
+              </Card>
+            </motion.div>
+          );
+        })}
       </Masonry>
 
       <style jsx global>{`
@@ -236,12 +233,12 @@ export default function MasonryGallery({
           margin-left: -16px;
           width: auto;
         }
-        
+
         .masonry-grid-column {
           padding-left: 16px;
           background-clip: padding-box;
         }
-        
+
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;

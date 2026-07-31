@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { storageService } from '@/lib/storage';
 import { imageService, categoryService } from '@/lib/database';
-import { PerformanceService } from '@/lib/performance';
 import { toast } from 'sonner';
 import type { Category } from '@/types';
 
@@ -24,15 +23,11 @@ interface ImageFile {
 interface ImageUploaderProps {
   onUploadComplete?: (results: { url: string; thumbnailUrl: string; fileName: string; fileSize: number; width?: number; height?: number }[]) => void;
   maxFiles?: number;
-  enableOptimization?: boolean;
-  optimizationQuality?: number;
 }
 
 export default function ImageUploader({ 
   onUploadComplete, 
   maxFiles = 10,
-  enableOptimization = true,
-  optimizationQuality = 0.8
 }: ImageUploaderProps) {
   const [files, setFiles] = useState<ImageFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -41,8 +36,6 @@ export default function ImageUploader({
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [title, setTitle] = useState<string>('');
   const [author, setAuthor] = useState<string>('');
-  const [optimizationEnabled, setOptimizationEnabled] = useState<boolean>(enableOptimization);
-  const [quality, setQuality] = useState<number>(optimizationQuality);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
   const queryClient = useQueryClient();
@@ -136,15 +129,8 @@ export default function ImageUploader({
         // 진행률 업데이트
         const progress = ((i + 1) / files.length) * 100;
         setUploadProgress(progress);
-        // 1. Storage에 최적화된 이미지 업로드 (최적화 옵션에 따라 자동 처리)
-        const result = optimizationEnabled 
-          ? await storageService.uploadOptimizedImageComplete(fileObj.file, {
-              quality: quality,
-              width: 1920,
-              height: 1080,
-              format: 'webp'
-            })
-          : await storageService.uploadImageComplete(fileObj.file);
+        // 가로·세로 비율 자동 유지 업로드 (사용자 선택 불필요)
+        const result = await storageService.uploadAuto(fileObj.file);
         
         // 2. 데이터베이스에 이미지 메타데이터 저장
         await imageService.create({
@@ -176,8 +162,8 @@ export default function ImageUploader({
       const totalOptimizedSize = results.reduce((sum, result) => sum + result.fileSize, 0);
       const compressionRatio = ((totalOriginalSize - totalOptimizedSize) / totalOriginalSize * 100).toFixed(1);
       
-      if (optimizationEnabled && parseFloat(compressionRatio) > 5) {
-        toast.success(`${files.length}개 이미지 업로드 완료! (${compressionRatio}% 압축)`);
+      if (parseFloat(compressionRatio) > 5) {
+        toast.success(`${files.length}개 이미지 업로드 완료! (${compressionRatio}% 압축, 가로·세로 비율 자동 유지)`);
       } else {
         toast.success(`${files.length}개 이미지 업로드 완료!`);
       }
@@ -284,61 +270,18 @@ export default function ImageUploader({
         </div>
       </Card>
 
-      {/* 이미지 최적화 설정 */}
+      {/* 자동 비율 안내 */}
       <Card className="p-4 sm:p-6">
-        <div className="space-y-6">
-          <div className="flex items-center gap-2">
-            <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <h3 className="text-lg font-semibold text-gray-900">이미지 최적화 설정</h3>
-          </div>
-          
-          <div className="space-y-4">
-            {/* 최적화 활성화 토글 */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="optimization-toggle" className="text-sm font-medium">
-                  이미지 최적화 활성화
-                </Label>
-                <p className="text-xs text-gray-500 mt-1">
-                  WebP 포맷으로 변환하고 압축하여 파일 크기를 줄입니다
-                </p>
-              </div>
-              <input
-                id="optimization-toggle"
-                type="checkbox"
-                checked={optimizationEnabled}
-                onChange={(e) => setOptimizationEnabled(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-            </div>
-
-            {/* 품질 설정 */}
-            {optimizationEnabled && (
-              <div className="space-y-2">
-                <Label htmlFor="quality-slider" className="text-sm font-medium">
-                  압축 품질: {Math.round(quality * 100)}%
-                </Label>
-                <input
-                  id="quality-slider"
-                  type="range"
-                  min="0.5"
-                  max="1.0"
-                  step="0.1"
-                  value={quality}
-                  onChange={(e) => setQuality(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>고압축 (50%)</span>
-                  <span>고품질 (100%)</span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  높은 품질은 파일 크기가 크지만 화질이 좋습니다
-                </p>
-              </div>
-            )}
+        <div className="flex items-start gap-3">
+          <svg className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">가로·세로 비율 자동 유지</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              세로로 촬영한 사진은 세로로, 가로는 가로로 그대로 저장됩니다.
+              별도로 비율을 선택할 필요가 없습니다.
+            </p>
           </div>
         </div>
       </Card>
@@ -414,11 +357,11 @@ export default function ImageUploader({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {files.map((fileObj) => (
               <div key={fileObj.id} className="relative">
-                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                <div className="rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center min-h-[120px] max-h-40">
                   <img
                     src={fileObj.preview}
                     alt="미리보기"
-                    className="w-full h-full object-cover"
+                    className="max-w-full max-h-40 w-auto h-auto object-contain"
                   />
                 </div>
                 
@@ -436,11 +379,6 @@ export default function ImageUploader({
                 </div>
                 <div className="text-xs text-gray-500">
                   {(fileObj.file.size / 1024 / 1024).toFixed(1)}MB
-                  {optimizationEnabled && (
-                    <span className="ml-2 text-green-600 font-medium">
-                      → 최적화됨
-                    </span>
-                  )}
                   {fileObj.file.size > 20 * 1024 * 1024 && (
                     <span className="ml-2 text-amber-600 font-medium">
                       ⚠️ 대용량

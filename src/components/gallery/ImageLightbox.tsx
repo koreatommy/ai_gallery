@@ -36,6 +36,7 @@ export default function ImageLightbox({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showComments, setShowComments] = useState(false);
+  const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
   const { isLiked, setImageLikeCount } = useLikes();
 
   // 이미지 변경시 좋아요 카운트 설정
@@ -51,6 +52,7 @@ export default function ImageLightbox({
       setZoom(1);
       setPosition({ x: 0, y: 0 });
       setShowComments(false);
+      setNaturalSize(null);
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -58,7 +60,7 @@ export default function ImageLightbox({
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [isOpen, image?.id]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -141,6 +143,9 @@ export default function ImageLightbox({
   const currentIndex = images.findIndex(img => img.id === image.id);
   const canGoNext = currentIndex < images.length - 1;
   const canGoPrevious = currentIndex > 0;
+  const displayWidth = naturalSize?.width || image.width;
+  const displayHeight = naturalSize?.height || image.height;
+  const portrait = !!(displayWidth && displayHeight && displayHeight > displayWidth);
 
   return (
     <AnimatePresence>
@@ -253,18 +258,30 @@ export default function ImageLightbox({
             </div>
           </div>
 
-          {/* 이미지 */}
-          <div className="flex-1 flex items-center justify-center px-16 py-20">
+          {/* 이미지 — 세로/가로 비율 자동 맞춤 */}
+          <div className="flex-1 flex items-center justify-center min-h-0 w-full px-4 md:px-16 py-20 overflow-hidden">
             <motion.img
               key={image.id}
               src={image.url}
               alt={image.title}
-              className={`max-w-full max-h-full object-contain select-none ${
+              className={`object-contain select-none ${
                 zoom > 1 ? 'cursor-grab' : 'cursor-zoom-in'
               } ${isDragging ? 'cursor-grabbing' : ''}`}
               style={{
+                maxHeight: 'calc(100vh - 10rem)',
+                maxWidth: portrait
+                  ? 'min(90vw, 70vh)'
+                  : 'min(92vw, 1400px)',
+                width: 'auto',
+                height: 'auto',
                 transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
                 transformOrigin: 'center'
+              }}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth && img.naturalHeight) {
+                  setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
+                }
               }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -276,8 +293,8 @@ export default function ImageLightbox({
                   handleZoomIn();
                 }
               }}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
             />
           </div>
@@ -361,8 +378,8 @@ export default function ImageLightbox({
                     <span>작성자: {image.author}</span>
                   )}
                   <span>{new Date(image.created_at).toLocaleDateString('ko-KR')}</span>
-                  {image.width && image.height && (
-                    <span>{image.width} × {image.height}</span>
+                  {displayWidth && displayHeight && (
+                    <span>{displayWidth} × {displayHeight}{portrait ? ' (세로)' : ''}</span>
                   )}
                 </div>
                 
